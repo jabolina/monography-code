@@ -1,0 +1,3 @@
+[submodule "monography"]
+	path = monography
+	url = https://github.com/jabolina/monography.git
