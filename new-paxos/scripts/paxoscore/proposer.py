@@ -8,22 +8,24 @@ from twisted.web.server import Site, NOT_DONE_YET
 import logging
 import struct
 
-logging.basicConfig(level=logging.DEBUG,format='%(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
 VALUE_SIZE = 64
 PHASE_2A = 3
+
 
 class Proposer(DatagramProtocol):
     """
     Proposer class implements a Paxos proposer which sends requests and wait 
     asynchronously for responses.
     """
+
     def __init__(self, config, proposer_id):
         """
         Initialize a Proposer with a configuration of learner address and port.
         The proposer is also configured with a port for receiving UDP packets.
         """
-        self.dst = (config.get('learner', 'addr'), \
+        self.dst = (config.get('learner', 'addr'),
                     config.getint('learner', 'port'))
         self.rnd = proposer_id
         self.req_id = 0
@@ -52,7 +54,7 @@ class Proposer(DatagramProtocol):
             packer = struct.Struct(fmt)
             packed_size = struct.calcsize(fmt)
             unpacked_data = packer.unpack(datagram[:packed_size])
-            req_id, result =  unpacked_data
+            req_id, result = unpacked_data
             self.defers[req_id].callback(result)
             pass
         except defer.AlreadyCalledError as ex:

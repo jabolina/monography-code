@@ -5,7 +5,7 @@ set -x
 # Exit on errors.
 set -e
 
-env_dir=$PWD/environment
+env_dir=$PWD/../environment
 
 cd $env_dir
 
@@ -62,27 +62,27 @@ if [ 1 -eq 0]; then
   sudo ldconfig
 
 
-# install nnpy
-echo "Installing nnpy"
-sh bmv2/travis/install-nnpy.sh
+  # install nnpy
+  echo "Installing nnpy"
+  sh bmv2/travis/install-nnpy.sh
 
-# clean up
-echo "Cleaning up"
-cd ..
-sudo rm -rf $tmpdir
+  # clean up
+  echo "Cleaning up"
+  cd ..
+  sudo rm -rf $tmpdir
 fi
 
 echo "Installing BMv2"
 cd bmv2
 ./autogen.sh
-./configure
+./configure --enable-debugger
 sudo make
 
 echo "Installing P4 BMv2"
 cd ../p4c-bmv2
-pip2.7 install -r requirements.txt --user
-pip2.7 install -r requirements_v1_1.txt --user
-python2.7 setup.py install --user
+pip2.7 install -r requirements.txt
+pip2.7 install -r requirements_v1_1.txt
+python2.7 setup.py install
 
 echo "Installing P4 HLIR"
 rm -rf p4-hlir

@@ -35,4 +35,5 @@ sudo PYTHONPATH=$PYTHONPATH:$bmv2_path/mininet/ python2.7 topo.py \
     --acceptor paxos_acceptor.json \
     --coordinator paxos_coordinator.json \
     --cli $bmv2_cli_path \
+    --debugger \
     --start-server
