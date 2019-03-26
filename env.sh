@@ -5,7 +5,7 @@ set -x
 # Exit on errors.
 set -e
 
-env_dir=$PWD/../environment
+env_dir=$PWD/environment
 
 cd $env_dir
 
