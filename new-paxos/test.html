@@ -1,0 +1,167 @@
+<html><head><title>web.Server Traceback (most recent call last)</title></head><body><b>web.Server Traceback (most recent call last):</b>
+
+<div>
+  <style type="text/css">
+    div.error {
+      color: red;
+      font-family: Verdana, Arial, helvetica, sans-serif;
+      font-weight: bold;
+    }
+
+    div {
+      font-family: Verdana, Arial, helvetica, sans-serif;
+    }
+
+    div.stackTrace {
+    }
+
+    div.frame {
+      padding: 1em;
+      background: white;
+      border-bottom: thin black dashed;
+    }
+
+    div.frame:first-child {
+      padding: 1em;
+      background: white;
+      border-top: thin black dashed;
+      border-bottom: thin black dashed;
+    }
+
+    div.location {
+    }
+
+    span.function {
+      font-weight: bold;
+      font-family: "Courier New", courier, monospace;
+    }
+
+    div.snippet {
+      margin-bottom: 0.5em;
+      margin-left: 1em;
+      background: #FFFFDD;
+    }
+
+    div.snippetHighlightLine {
+      color: red;
+    }
+
+    span.code {
+      font-family: "Courier New", courier, monospace;
+    }
+  </style>
+
+  <div class="error">
+    <span>socket.error</span>: <span>[Errno 101] Network is unreachable</span>
+  </div>
+  <div class="stackTrace">
+    <div class="frame">
+      <div class="location">
+        <span>/home/jab/Git/monography-code/venv/lib/python2.7/site-packages/twisted/web/server.py</span>:<span>199</span> in
+        <span class="function">process</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">198</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160; &#160; &#160; &#160; &#160;self._encoder = encoder</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">199</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;self.render(resrc)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">200</span>
+          <code class="code"> &#160; &#160; &#160; &#160;except:</code>
+        </div>
+      </div>
+    </div><div class="frame">
+      <div class="location">
+        <span>/home/jab/Git/monography-code/venv/lib/python2.7/site-packages/twisted/web/server.py</span>:<span>259</span> in
+        <span class="function">render</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">258</span>
+          <code class="code"> &#160; &#160; &#160; &#160;try:</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">259</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;body = resrc.render(self)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">260</span>
+          <code class="code"> &#160; &#160; &#160; &#160;except UnsupportedMethod as e:</code>
+        </div>
+      </div>
+    </div><div class="frame">
+      <div class="location">
+        <span>/home/jab/Git/monography-code/venv/lib/python2.7/site-packages/twisted/web/resource.py</span>:<span>250</span> in
+        <span class="function">render</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">249</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;raise UnsupportedMethod(allowedMethods)</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">250</span>
+          <code class="code"> &#160; &#160; &#160; &#160;return m(request)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">251</span>
+          <code class="code"></code>
+        </div>
+      </div>
+    </div><div class="frame">
+      <div class="location">
+        <span>scripts/httpServer.py</span>:<span>46</span> in
+        <span class="function">render_GET</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">45</span>
+          <code class="code"> &#160; &#160; &#160; &#160;data = json.dumps(request.args)</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">46</span>
+          <code class="code"> &#160; &#160; &#160; &#160;d = self.proposer.submit(data)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">47</span>
+          <code class="code"> &#160; &#160; &#160; &#160;d.addCallback(self._waitResponse, request)</code>
+        </div>
+      </div>
+    </div><div class="frame">
+      <div class="location">
+        <span>/home/jab/Git/monography-code/new-paxos/scripts/paxoscore/proposer.py</span>:<span>43</span> in
+        <span class="function">submit</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">42</span>
+          <code class="code"> &#160; &#160; &#160; &#160;packed_data = packer.pack(*values)</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">43</span>
+          <code class="code"> &#160; &#160; &#160; &#160;self.transport.write(packed_data, self.dst)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">44</span>
+          <code class="code"> &#160; &#160; &#160; &#160;self.defers[self.req_id] = defer.Deferred()</code>
+        </div>
+      </div>
+    </div><div class="frame">
+      <div class="location">
+        <span>/home/jab/Git/monography-code/venv/lib/python2.7/site-packages/twisted/internet/udp.py</span>:<span>298</span> in
+        <span class="function">write</span>
+      </div>
+      <div class="snippet">
+        <div class="snippetLine">
+          <span class="lineno">297</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;try:</code>
+        </div><div class="snippetHighlightLine">
+          <span class="lineno">298</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160; &#160; &#160;return self.socket.sendto(datagram, addr)</code>
+        </div><div class="snippetLine">
+          <span class="lineno">299</span>
+          <code class="code"> &#160; &#160; &#160; &#160; &#160; &#160;except socket.error as se:</code>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="error">
+    <span>socket.error</span>: <span>[Errno 101] Network is unreachable</span>
+  </div>
+</div>
+
+</body></html>

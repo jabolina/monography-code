@@ -75,7 +75,7 @@ def main(args):
     for n in [1, 2, 3, 4]: 
         h = net.get('h%d' % n)
         for off in ["rx", "tx", "sg"]:
-            cmd = "/sbin/ethtool --offload eth0 %s off" % off
+            cmd = "/sbin/ethtool --offload enp3s0f2 %s off" % off
             print(cmd)
             h.cmd(cmd)
         print("disable ipv6")
@@ -85,7 +85,7 @@ def main(args):
         h.cmd("sysctl -w net.ipv4.tcp_congestion_control=reno")
         h.cmd("iptables -I OUTPUT -p icmp --icmp-type destination-unreachable -j DROP")
         print("add mutlicast route")
-        h.cmd("route add -net 224.0.0.0 netmask 224.0.0.0 eth0")
+        h.cmd("route add -net 224.0.0.0 netmask 224.0.0.0 enp3s0f2")
 
     sleep(2)
 
