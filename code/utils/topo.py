@@ -96,7 +96,7 @@ def main():
     for n in [1, 2, 3, 4]: 
         h = net.get('h%d' % n)
         for off in ["rx", "tx", "sg"]:
-            cmd = "/sbin/ethtool --offload enp3s0f2 %s off" % off
+            cmd = "/sbin/ethtool --offload eth0 %s off" % off
             print cmd
             h.cmd(cmd)
         print "disable ipv6"
@@ -106,7 +106,7 @@ def main():
         h.cmd("sysctl -w net.ipv4.tcp_congestion_control=reno")
         h.cmd("iptables -I OUTPUT -p icmp --icmp-type destination-unreachable -j DROP")
         print "add mutlicast route"
-        h.cmd("route add -net 224.0.0.0 netmask 224.0.0.0 enp3s0f2")
+        h.cmd("route add -net 224.0.0.0 netmask 224.0.0.0 eth0")
 
     sleep(2)
 
@@ -143,13 +143,11 @@ def main():
 
     if args.start_server:
         h1 = net.get('h1')
-        h1.cmd("python scripts/httpServer.py --cfg scripts/paxos.cfg &")
+        h1.cmd("python ../app/httpServer.py --cfg ../app/paxos.cfg &")
         h2 = net.get('h2')
-        h2.cmd("python scripts/backend.py --cfg scripts/paxos.cfg &")
+        h2.cmd("python ../app/backend.py --cfg ../app/paxos.cfg &")
         h3 = net.get('h3')
-        h3.cmd("python scripts/backend.py --cfg scripts/paxos.cfg &")
-        h4 = net.get('h4')
-        h4.cmd("python scripts/backend.py --cfg scripts/paxos.cfg &")
+        h3.cmd("python ../app/backend.py --cfg ../app/paxos.cfg &")
 
     print "Ready !"
 
