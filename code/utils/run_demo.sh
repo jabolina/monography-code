@@ -16,21 +16,28 @@
 
 # reference to bmv2 and p4c-bm2
 ##########################
+
 base_path=$PWD/../../environment
-BMV2_PATH=$base_path/bmv2
-P4C_BM_PATH=$base_path/p4c-bmv2
+
+if [ $# -eq 1 ]; then
+    base_path=~
+fi
+
+bmv2_path=$base_path/bmv2
+p4c_bm_path=$base_path/p4c-bmv2
 ##########################
-P4C_BM_SCRIPT=$P4C_BM_PATH/p4c_bm/__main__.py
-SWITCH_PATH=$BMV2_PATH/targets/simple_switch/simple_switch
-CLI_PATH=$BMV2_PATH/targets/simple_switch/sswitch_CLI
 
-$P4C_BM_SCRIPT ../p4src/paxos_coordinator.p4 --json paxos_coordinator.json
-$P4C_BM_SCRIPT ../p4src/paxos_acceptor.p4 --json paxos_acceptor.json
-$P4C_BM_SCRIPT ../p4src/paxos_learner.p4 --json paxos_learner.json
+p4c_bm_script=$p4c_bm_path/p4c_bm/__main__.py
+switch_path=$bmv2_path/targets/simple_switch/simple_switch
+cli_path=$bmv2_path/targets/simple_switch/sswitch_CLI
 
-sudo PYTHONPATH=$PYTHONPATH:$BMV2_PATH/mininet/ python topo.py \
-    --behavioral-exe $BMV2_PATH/targets/simple_switch/simple_switch \
+$p4c_bm_script ../p4src/paxos_coordinator.p4 --json paxos_coordinator.json
+$p4c_bm_script ../p4src/paxos_acceptor.p4 --json paxos_acceptor.json
+$p4c_bm_script ../p4src/paxos_learner.p4 --json paxos_learner.json
+
+sudo PYTHONPATH=$PYTHONPATH:$bmv2_path/mininet/ python topo.py \
+    --behavioral-exe $switch_path \
     --acceptor paxos_acceptor.json \
     --coordinator paxos_coordinator.json \
-    --cli $CLI_PATH \
+    --cli $cli_path \
     --start-server
