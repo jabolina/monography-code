@@ -1,22 +1,20 @@
 #!/usr/bin/python
 
-import os
-import sys
-import logging
-import argparse
 import ConfigParser
+import argparse
 from scapy.all import *
+
 from paxoscore.learner import Learner
-from twisted.internet import defer
 
-
-THIS_DIR=os.path.dirname(os.path.realpath(__file__))
+THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(THIS_DIR)
+
 
 class SimpleDatabase(object):
     """
     Simple database backend
     """
+
     def __init__(self):
         self.db = {}
 
@@ -57,6 +55,7 @@ def main():
     except (KeyboardInterrupt, SystemExit):
         learner.stop()
         sys.exit()
+
 
 if __name__ == '__main__':
     main()

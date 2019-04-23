@@ -1,25 +1,25 @@
 #!/usr/bin/python
 
-import struct
-import logging
+import netifaces
 from math import ceil
+
+import json
 from scapy.all import *
 from twisted.internet import defer
-from threading import Thread
-import json
-import netifaces
 
-logging.basicConfig(filename="learner.log",level=logging.DEBUG,format='%(message)s')
+logging.basicConfig(filename="learner.log", level=logging.DEBUG, format='%(message)s')
 VALUE_SIZE = 64
 PHASE_1A = 1
 PHASE_1B = 2
 PHASE_2A = 3
 PHASE_2B = 4
 
+
 class PaxosMessage(object):
     """
     PaxosMessage class defines the structure of a Paxos message
     """
+
     def __init__(self, nid, inst, crnd, vrnd, value):
         """
         Initialize a Paxos message with:
@@ -35,11 +35,13 @@ class PaxosMessage(object):
         self.vrnd = vrnd
         self.val = value
 
+
 class PaxosLearner(object):
     """
     PaxosLearner acts as Paxos learner that learns a decision from a majority
     of acceptors. 
     """
+
     def __init__(self, num_acceptors):
         """
         Initialize a learner with a the number of acceptors to decide the 
@@ -51,11 +53,11 @@ class PaxosLearner(object):
         self.majority = ceil((num_acceptors + 1) / 2)
         logging.info("Majority must be [{}]".format(self.majority))
 
-
     class ProposerState(object):
         """
         The state of learner of a particular instance.
         """
+
         def __init__(self, crnd):
             self.crnd = crnd
             self.nids = set()
@@ -67,18 +69,18 @@ class PaxosLearner(object):
         """
         The state of learner of a particular instance.
         """
+
         def __init__(self, crnd):
             self.crnd = crnd
             self.nids = set()
             self.val = None
             self.finished = False
 
-
     def handle_p1b(self, msg):
         """handle 1a message and return decision if existing a majority.
         Otherwise return None"""
         res = None
-        state = self.proposerState.get(msg.inst)  
+        state = self.proposerState.get(msg.inst)
         if state is None:
             state = self.ProposerState(msg.crnd)
         if not state.finished:
@@ -90,10 +92,9 @@ class PaxosLearner(object):
 
                     if len(state.nids) >= self.majority:
                         state.finished = True
-                        res = PaxosMessage(10, msg.inst, state.crnd, state.hvrnd, state.hval)                        
+                        res = PaxosMessage(10, msg.inst, state.crnd, state.hvrnd, state.hval)
                     self.proposerState[msg.inst] = state
         return res
-
 
     def handle_p2b(self, msg):
         """handle 2a message and return decision if existing a majority.
@@ -131,11 +132,13 @@ class PaxosLearner(object):
                     self.states[msg.inst] = state
         return res
 
+
 class Learner(object):
     """
     A learner instance provides the ordering of requests to the overlay application.
     If a decision has been made, the learner delivers that decision to the application.
     """
+
     def __init__(self, num_acceptors, learner_addr, learner_port):
         """
         Initialize a learner with the number of acceptors, maximum number of requests,
@@ -153,9 +156,9 @@ class Learner(object):
         """
         packer = struct.Struct('>' + 'B {0}s'.format(VALUE_SIZE))
         packed_data = packer.pack(*(req_id, str(result)))
-        pkt_header = IP(dst=dst)/UDP(sport=sport, dport=dport)
+        pkt_header = IP(dst=dst) / UDP(sport=sport, dport=dport)
         logging.info("Sending response [{}] with id [{}]".format(packed_data, req_id))
-        send(pkt_header/packed_data, verbose=True)
+        send(pkt_header / packed_data, verbose=True)
 
     def addDeliver(self, deliver_cb):
         """
@@ -168,7 +171,7 @@ class Learner(object):
         request_id = 10
         acceptor_id = 10
         values = (typ, i, rnd, vrnd, acceptor_id, request_id, val)
-        packer = struct.Struct('!' + 'B H B B Q B {0}s'.format(VALUE_SIZE-1))
+        packer = struct.Struct('!' + 'B H B B Q B {0}s'.format(VALUE_SIZE - 1))
         packed_data = packer.pack(*values)
         return packed_data
 
@@ -178,9 +181,9 @@ class Learner(object):
         """
         for itf in netifaces.interfaces():
             ether = Ether(src='00:04:00:00:00:01', dst='01:00:5e:03:1d:47')
-            pkt_header = ether/IP(dst=dst)/UDP(sport=12345, dport=dport)
+            pkt_header = ether / IP(dst=dst) / UDP(sport=12345, dport=dport)
             logging.info("Sending msg [{}] with headers [{}] to interface [{}]".format(msg, pkt_header, itf))
-            sendp(pkt_header/msg, iface=itf, verbose=True)
+            sendp(pkt_header / msg, iface=itf, verbose=True)
 
     def retryInstance(self, inst):
         msg1a = self.make_paxos(PHASE_1A, inst, 1, 0, '')
@@ -216,14 +219,12 @@ class Learner(object):
             print "Unexpected error:", sys.exc_info()[0]
             raise
 
-
-
     def handle_pkt(self, pkt):
         """
         This method handles the arrived packet, such as parsing, handing out the packet to
         Paxos learner module, and delivering the decision.
         """
-        paxos_type = { 1: "prepare", 2: "promise", 3: "accept", 4: "accepted" }
+        paxos_type = {1: "prepare", 2: "promise", 3: "accept", 4: "accepted"}
         try:
             if pkt['IP'].proto != 0x11:
                 return
@@ -245,7 +246,7 @@ class Learner(object):
                         self.maxInstance = inst
                     d = self.deliverInstance(inst)
                     d.addCallback(self.respond, req_id, pkt[IP].src,
-                        pkt[UDP].dport, pkt[UDP].sport)
+                                  pkt[UDP].dport, pkt[UDP].sport)
             elif typ == PHASE_1B:
                 res = self.learner.handle_p1b(msg)
                 logging.info("Message 1B response [{}] is type None [{}]".format(res, res is None))
@@ -262,14 +263,14 @@ class Learner(object):
         Start a learner by sniffing on all learner's interfaces.
         """
         logging.debug("| %10s | %4s |  %2s | %2s | %4s | %s |" % \
-             ("type", "inst", "pr", "ar", "val", "payload"))
+                      ("type", "inst", "pr", "ar", "val", "payload"))
         try:
             if timeout > 0:
                 sniff(count=count, timeout=timeout, filter="udp && dst port 34952",
-                  prn = lambda x: self.handle_pkt(x))
+                      prn=lambda x: self.handle_pkt(x))
             else:
                 sniff(count=count, filter="udp && dst port 34952",
-                  prn = lambda x: self.handle_pkt(x))
+                      prn=lambda x: self.handle_pkt(x))
         except Exception as e:
             logging.error("Error sniffing [{}]".format(e))
         return
@@ -279,4 +280,4 @@ class Learner(object):
         Stop sniffing on the learner's interfaces. Not implemented yet
         """
         pass
- # tcpdump -i eth0 -qtNnn port 34952
+# tcpdump -i eth0 -qtNnn port 34952
