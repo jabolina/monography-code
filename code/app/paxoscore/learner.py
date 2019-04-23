@@ -102,13 +102,13 @@ class PaxosLearner(object):
         """handle 2a message and return decision if existing a majority.
         Otherwise return None"""
         res = None
-        logging.info("Message with instance [{}]".format(msg.inst))
+        logging.info("Message with instance number [{}]".format(msg.inst))
 
         state = self.states.get(msg.inst)
         if state is None:
             state = self.LearnerState(msg.crnd)
 
-        logging.info("State is [{}] < [{}]".format(state.crnd, msg.crnd))
+        logging.info("Message instance is finished? [{}]".format(state.finished))
 
         if not state.finished:
             if state.crnd < msg.crnd:
@@ -116,7 +116,7 @@ class PaxosLearner(object):
                 state = self.LearnerState(msg.crnd)
 
             if state.crnd == msg.crnd:
-                logging.info("Message node id [{}]".format(msg.nid))
+                logging.info("Message from acceptor with id [{}]".format(msg.nid))
 
                 if msg.nid not in state.nids:
                     state.nids.add(msg.nid)
@@ -124,7 +124,7 @@ class PaxosLearner(object):
                         state.val = msg.val
 
                     logging.info("Majority? [{}]".format(len(state.nids) >= self.majority))
-                    logging.info("State nids [{}]".format(state.nids))
+                    logging.info("Acceptor who voted [{}]".format(state.nids))
 
                     if len(state.nids) >= self.majority:
                         state.finished = True
@@ -253,7 +253,8 @@ class Learner(object):
 
             if typ == PHASE_2B:
                 res = self.learner.handle_p2b(msg)
-                logging.info("Message 2B response [{}] is type None [{}]".format(res, res is None))
+                logging.info("Message 2B response [{}] will be ignored [{}]".format(res, res is None))
+
                 if res is not None:
                     inst = int(res[0])
                     if self.max_instance < inst:
@@ -269,10 +270,13 @@ class Learner(object):
                 if res is not None:
                     msg2a = self.make_paxos(PHASE_2A, res.inst, res.crnd, res.vrnd, res.val)
                     self.send_msg(msg2a, self.learner_addr, self.learner_port)
+
         except IndexError as ex:
             logging.error("Error while handling packet [{}]".format(ex))
         except Exception as ex:
             logging.error("Unknown error while handling packet [{}]".format(ex))
+
+        return True
 
     def start(self, count, timeout):
         """

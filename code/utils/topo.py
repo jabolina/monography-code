@@ -14,18 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from mininet.net import Mininet
-from mininet.topo import Topo
-from mininet.log import setLogLevel, info
-from mininet.cli import CLI
-from mininet.link import TCLink
-
-from p4_mininet import P4Switch, P4Host
+from time import sleep
 
 import argparse
-from time import sleep
 import os
 import subprocess
+from mininet.cli import CLI
+from mininet.log import setLogLevel
+from mininet.net import Mininet
+from mininet.topo import Topo
+from p4_mininet import P4Switch, P4Host
 from subprocess import PIPE
 
 _THIS_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -45,19 +43,20 @@ parser.add_argument('--start-server', help='Start Paxos httpServer and backends'
 
 args = parser.parse_args()
 
+
 class MyTopo(Topo):
-    def __init__(self, sw_path, acceptor, coordinator,  **opts):
+    def __init__(self, sw_path, acceptor, coordinator, **opts):
         # Initialize topology and default options
         Topo.__init__(self, **opts)
 
         s1 = self.addSwitch('s1',
-                      sw_path = args.behavioral_exe,
-                      json_path = coordinator,
-                      thrift_port = _THRIFT_BASE_PORT + 1,
-                      pcap_dump = False,
-                      log_console = True,
-                      verbose = True,
-                      device_id = 1)
+                            sw_path=args.behavioral_exe,
+                            json_path=coordinator,
+                            thrift_port=_THRIFT_BASE_PORT + 1,
+                            pcap_dump=False,
+                            log_console=True,
+                            verbose=True,
+                            device_id=1)
 
         h1 = self.addHost('h1')
         h4 = self.addHost('h4')
@@ -66,23 +65,23 @@ class MyTopo(Topo):
         switches = []
         hosts = []
         for i in [2, 3, 4]:
-            switches.append(self.addSwitch('s%d' % (i),
-                                    sw_path = sw_path,
-                                    json_path = acceptor,
-                                    thrift_port = _THRIFT_BASE_PORT + i,
-                                    pcap_dump = False,
-                                    log_console = True,
-                                    verbose = True,
-                                    device_id = i))
-        
-        for h in [2,3]:
-            hosts.append(self.addHost('h%d' % (h)))
+            switches.append(self.addSwitch('s%d' % i,
+                                           sw_path=sw_path,
+                                           json_path=acceptor,
+                                           thrift_port=_THRIFT_BASE_PORT + i,
+                                           pcap_dump=False,
+                                           log_console=True,
+                                           verbose=True,
+                                           device_id=i))
+
+        for h in [2, 3]:
+            hosts.append(self.addHost('h%d' % h))
 
         for i, s in enumerate(switches):
             for j, h in enumerate(hosts):
-                self.addLink(h, s, intfName1='eth{0}'.format(i+1),
-                            params1={'ip': '10.0.{0}.{1}/8'.format(i+1, j+2)}
-                            )
+                self.addLink(h, s, intfName1='eth{0}'.format(i + 1),
+                             params1={'ip': '10.0.{0}.{1}/8'.format(i + 1, j + 2)}
+                             )
             self.addLink(s, s1)
 
 
@@ -90,14 +89,14 @@ def main():
     topo = MyTopo(args.behavioral_exe,
                   args.acceptor, args.coordinator)
 
-    net = Mininet(topo = topo,
-                  host = P4Host,
-                  switch = P4Switch,
-                  controller = None )
+    net = Mininet(topo=topo,
+                  host=P4Host,
+                  switch=P4Switch,
+                  controller=None)
 
     net.start()
 
-    for n in [1, 2, 3, 4]: 
+    for n in [1, 2, 3, 4]:
         h = net.get('h%d' % n)
         for off in ["rx", "tx", "sg"]:
             cmd = "/sbin/ethtool --offload eth0 %s off" % off
@@ -119,7 +118,7 @@ def main():
         with open("acceptor_commands.txt", "r") as f:
             print " ".join(cmd)
             try:
-                output = subprocess.check_output(cmd, stdin = f)
+                output = subprocess.check_output(cmd, stdin=f)
                 print output
             except subprocess.CalledProcessError as e:
                 print e
@@ -129,7 +128,7 @@ def main():
     with open("coordinator_commands.txt", "r") as f:
         print " ".join(cmd)
         try:
-            output = subprocess.check_output(cmd, stdin = f)
+            output = subprocess.check_output(cmd, stdin=f)
             print output
         except subprocess.CalledProcessError as e:
             print e
@@ -137,7 +136,7 @@ def main():
 
     for i in [2, 3, 4]:
         cmd = [args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)]
-        rule = 'register_write datapath_id 0 %d' % (i-1)
+        rule = 'register_write datapath_id 0 %d' % (i - 1)
         p = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate(rule)
         if out:
@@ -155,9 +154,10 @@ def main():
 
     print "Ready !"
 
-    CLI( net )
+    CLI(net)
     net.stop()
 
+
 if __name__ == '__main__':
-    setLogLevel( 'info' )
+    setLogLevel('info')
     main()
