@@ -279,3 +279,4 @@ class Learner(object):
         Stop sniffing on the learner's interfaces. Not implemented yet
         """
         pass
+ # tcpdump -i eth0 -qtNnn port 34952

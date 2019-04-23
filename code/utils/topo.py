@@ -55,6 +55,8 @@ class MyTopo(Topo):
                       json_path = coordinator,
                       thrift_port = _THRIFT_BASE_PORT + 1,
                       pcap_dump = False,
+                      log_console = True,
+                      verbose = True,
                       device_id = 1)
 
         h1 = self.addHost('h1')
@@ -69,6 +71,8 @@ class MyTopo(Topo):
                                     json_path = acceptor,
                                     thrift_port = _THRIFT_BASE_PORT + i,
                                     pcap_dump = False,
+                                    log_console = True,
+                                    verbose = True,
                                     device_id = i))
         
         for h in [2,3]:
