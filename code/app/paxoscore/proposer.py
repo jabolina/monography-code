@@ -55,9 +55,11 @@ class Proposer(DatagramProtocol):
             packed_size = struct.calcsize(fmt)
             unpacked_data = packer.unpack(datagram[:packed_size])
             req_id, result = unpacked_data
+
             logging.info("Response received [{}] with id [{}]".format(result, req_id))
-            self.defers[req_id].callback(result)
-            pass
+
+            if req_id in self.defers:
+                self.defers[req_id].callback(result)
+                self.defers.pop(req_id)
         except defer.AlreadyCalledError as ex:
-            logging.error("Error while handling response: [{}]".format(ex))
-            pass
+            logging.error("Error while handling response: [{}]".format(ex.message))
