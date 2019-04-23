@@ -30,7 +30,7 @@ class SimpleDatabase(object):
             try:
                 v = self.db.get(k)
                 d.callback('%s\n' % v)
-            except KeyError as ex:
+            except KeyError:
                 d.callback("None\n")
 
 
@@ -49,7 +49,7 @@ def main():
 
     learner = Learner(num_acceptors, learner_addr, learner_port)
     dbserver = SimpleDatabase()
-    learner.addDeliver(dbserver.execute)
+    learner.add_deliver(dbserver.execute)
     try:
         learner.start(count, timeout)
     except (KeyboardInterrupt, SystemExit):

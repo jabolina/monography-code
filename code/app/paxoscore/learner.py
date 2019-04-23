@@ -5,6 +5,8 @@ from math import ceil
 
 import json
 from scapy.all import *
+from scapy.layers.inet import IP, UDP
+from scapy.layers.l2 import Ether
 from twisted.internet import defer
 
 logging.basicConfig(filename="learner.log", level=logging.DEBUG, format='%(message)s')
@@ -147,27 +149,25 @@ class Learner(object):
         self.learner = PaxosLearner(num_acceptors)
         self.learner_addr = learner_addr
         self.learner_port = learner_port
-        self.minUncommitedIndex = 1
-        self.maxInstance = 1
+        self.min_uncommited_index = 1
+        self.max_instance = 1
+        self.deliver = None
 
-    def respond(self, result, req_id, dst, sport, dport):
+    @staticmethod
+    def respond(result, req_id, dst, sport, dport):
         """
         This method sends the reply from application server to the origin of the request.
         """
         packer = struct.Struct('>' + 'B {0}s'.format(VALUE_SIZE))
         packed_data = packer.pack(*(req_id, str(result)))
         pkt_header = IP(dst=dst) / UDP(sport=sport, dport=dport)
+
         logging.info("Sending response [{}] with id [{}]".format(packed_data, req_id))
+
         send(pkt_header / packed_data, verbose=True)
 
-    def addDeliver(self, deliver_cb):
-        """
-        This method allows the application server attach the request handler when such a
-        request has been chosen for servicing.
-        """
-        self.deliver = deliver_cb
-
-    def make_paxos(self, typ, i, rnd, vrnd, val):
+    @staticmethod
+    def make_paxos(typ, i, rnd, vrnd, val):
         request_id = 10
         acceptor_id = 10
         values = (typ, i, rnd, vrnd, acceptor_id, request_id, val)
@@ -175,56 +175,68 @@ class Learner(object):
         packed_data = packer.pack(*values)
         return packed_data
 
-    def sendMsg(self, msg, dst, dport):
+    @staticmethod
+    def send_msg(msg, dst, dport):
         """
         This method sends the reply from application server to the origin of the request.
         """
         for itf in netifaces.interfaces():
             ether = Ether(src='00:04:00:00:00:01', dst='01:00:5e:03:1d:47')
             pkt_header = ether / IP(dst=dst) / UDP(sport=12345, dport=dport)
+
             logging.info("Sending msg [{}] with headers [{}] to interface [{}]".format(msg, pkt_header, itf))
+
             sendp(pkt_header / msg, iface=itf, verbose=True)
 
-    def retryInstance(self, inst):
-        msg1a = self.make_paxos(PHASE_1A, inst, 1, 0, '')
-        self.sendMsg(msg1a, self.learner_addr, self.learner_port)
+    def add_deliver(self, deliver_cb):
+        """
+        This method allows the application server attach the request handler when such a
+        request has been chosen for servicing.
+        """
+        self.deliver = deliver_cb
 
-    def deliverInstance(self, inst):
+    def retry_instance(self, inst):
+        msg1a = self.make_paxos(PHASE_1A, inst, 1, 0, '')
+        Learner.send_msg(msg1a, self.learner_addr, self.learner_port)
+
+    def deliver_instance(self, inst):
+        d = defer.Deferred()
+
         try:
-            d = defer.Deferred()
-            if inst == self.minUncommitedIndex:
+            if inst == self.min_uncommited_index:
                 cmd = self.learner.logs[inst]
                 cmd_in_dict = json.loads(cmd)
                 logging.info("Trying to deliver [{}]".format(cmd_in_dict))
-                self.deliver(cmd_in_dict, d)
-                self.minUncommitedIndex += 1
 
-                if inst < self.maxInstance:
+                self.deliver(cmd_in_dict, d)
+                self.min_uncommited_index += 1
+
+                if inst < self.max_instance:
                     logging.info("Try to deliver next instance [{}]".format(inst))
-                    self.deliverInstance(inst + 1)
+
+                    self.deliver_instance(inst + 1)
                 return d
-            elif inst > self.minUncommitedIndex:
+
+            elif inst > self.min_uncommited_index:
                 logging.info("Retrying to deliver [{}]".format(inst))
-                return self.deliverInstance(inst - 1)
+
+                return self.deliver_instance(inst - 1)
             else:
                 logging.error("Doing nothing!")
         except KeyError as keyerr:
-            logging.error("Error while delivering message [{}]".format(ex))
-            print "Log has a gap at index %d" % inst
-            self.retryInstance(inst)
+            logging.error("Error while delivering message [{}]".format(keyerr))
+            self.retry_instance(inst)
             d.callback("Retry")
             return d
         except Exception as ex:
             logging.error("Unexpected error while delivering the message [{}]".format(ex))
-            print "Unexpected error:", sys.exc_info()[0]
-            raise
 
     def handle_pkt(self, pkt):
         """
         This method handles the arrived packet, such as parsing, handing out the packet to
         Paxos learner module, and delivering the decision.
         """
-        paxos_type = {1: "prepare", 2: "promise", 3: "accept", 4: "accepted"}
+
         try:
             if pkt['IP'].proto != 0x11:
                 return
@@ -236,23 +248,27 @@ class Learner(object):
             typ, inst, rnd, vrnd, acceptor_id, req_id, value = unpacked_data
             value = value.rstrip('\t\r\n\0')
             msg = PaxosMessage(acceptor_id, inst, rnd, vrnd, value)
+
             logging.info("Handling message [{}]".format(unpacked_data))
+
             if typ == PHASE_2B:
                 res = self.learner.handle_p2b(msg)
                 logging.info("Message 2B response [{}] is type None [{}]".format(res, res is None))
                 if res is not None:
                     inst = int(res[0])
-                    if self.maxInstance < inst:
-                        self.maxInstance = inst
-                    d = self.deliverInstance(inst)
+                    if self.max_instance < inst:
+                        self.max_instance = inst
+                    d = self.deliver_instance(inst)
                     d.addCallback(self.respond, req_id, pkt[IP].src,
                                   pkt[UDP].dport, pkt[UDP].sport)
+
             elif typ == PHASE_1B:
                 res = self.learner.handle_p1b(msg)
                 logging.info("Message 1B response [{}] is type None [{}]".format(res, res is None))
+
                 if res is not None:
                     msg2a = self.make_paxos(PHASE_2A, res.inst, res.crnd, res.vrnd, res.val)
-                    self.sendMsg(msg2a, self.learner_addr, self.learner_port)
+                    self.send_msg(msg2a, self.learner_addr, self.learner_port)
         except IndexError as ex:
             logging.error("Error while handling packet [{}]".format(ex))
         except Exception as ex:
@@ -262,7 +278,7 @@ class Learner(object):
         """
         Start a learner by sniffing on all learner's interfaces.
         """
-        logging.debug("| %10s | %4s |  %2s | %2s | %4s | %s |" % \
+        logging.debug("| %10s | %4s |  %2s | %2s | %4s | %s |" %
                       ("type", "inst", "pr", "ar", "val", "payload"))
         try:
             if timeout > 0:
@@ -273,7 +289,8 @@ class Learner(object):
                       prn=lambda x: self.handle_pkt(x))
         except Exception as e:
             logging.error("Error sniffing [{}]".format(e))
-        return
+
+        logging.info("Learner finished")
 
     def stop(self):
         """
