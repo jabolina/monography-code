@@ -35,13 +35,17 @@ class Proposer(DatagramProtocol):
         Submit a request with an associated request id. The request id is used
         to lookup the original request when receiving a response.
         """
-        self.req_id += 1
+        self.req_id = self.req_id + 1 if self.req_id + 1 < 255 else 1
+
         values = (PHASE_2A, 0, self.rnd, self.rnd, 0, self.req_id, msg)
         packer = struct.Struct('>' + 'B H B B Q B {0}s'.format(VALUE_SIZE - 1))
         packed_data = packer.pack(*values)
+
         logging.info("Sending request [{}] with id [{}]".format(packed_data, self.req_id))
+
         self.transport.write(packed_data, self.dst)
         self.defers[self.req_id] = defer.Deferred()
+
         return self.defers[self.req_id]
 
     def datagramReceived(self, datagram, address):
