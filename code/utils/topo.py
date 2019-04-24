@@ -28,6 +28,7 @@ from subprocess import PIPE
 
 _THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 _THRIFT_BASE_PORT = 22222
+_ACCEPTORS = [2, 3, 4, 5, 6]
 
 parser = argparse.ArgumentParser(description='Mininet demo')
 parser.add_argument('--behavioral-exe', help='Path to behavioral executable',
@@ -64,7 +65,7 @@ class MyTopo(Topo):
         self.addLink(h4, s1)
         switches = []
         hosts = []
-        for i in [2, 3, 4]:
+        for i in _ACCEPTORS:
             switches.append(self.addSwitch('s%d' % i,
                                            sw_path=sw_path,
                                            json_path=acceptor,
@@ -96,7 +97,7 @@ def main():
 
     net.start()
 
-    for n in [1, 2, 3, 4]:
+    for n in range(len(_ACCEPTORS) + 1):
         h = net.get('h%d' % n)
         for off in ["rx", "tx", "sg"]:
             cmd = "/sbin/ethtool --offload eth0 %s off" % off
@@ -113,7 +114,7 @@ def main():
 
     sleep(2)
 
-    for i in [2, 3, 4]:
+    for i in _ACCEPTORS:
         cmd = [args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)]
         with open("acceptor_commands.txt", "r") as f:
             print " ".join(cmd)
@@ -134,7 +135,7 @@ def main():
             print e
             print e.output
 
-    for i in [2, 3, 4]:
+    for i in _ACCEPTORS:
         cmd = [args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)]
         rule = 'register_write datapath_id 0 %d' % (i - 1)
         p = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
