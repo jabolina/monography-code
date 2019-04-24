@@ -246,7 +246,7 @@ class Learner(object):
 
             if typ == PHASE_2B:
                 res = self.learner.handle_p2b(msg)
-                logging.info("Message 2B response [{}] will be ignored [{}]".format(res, res is None))
+                logging.info("Message 2B with req [{}] response [{}] will be ignored [{}]".format(req_id, res, res is None))
 
                 if res is not None:
                     inst = int(res[0])
@@ -269,7 +269,7 @@ class Learner(object):
         except Exception as ex:
             logging.error("Unknown error while handling packet [{}]".format(ex))
 
-        return True
+        return "OK"
 
     def start(self, count, timeout):
         """
