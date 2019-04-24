@@ -132,6 +132,9 @@ class PaxosLearner(object):
                         res = (msg.inst, state.val)
 
                     self.states[msg.inst] = state
+        else:
+            res = (msg.inst, self.logs[msg.inst])
+
         return res
 
 
@@ -199,7 +202,7 @@ class Learner(object):
         msg1a = self.make_paxos(PHASE_1A, inst, 1, 0, '')
         Learner.send_msg(msg1a, self.learner_addr, self.learner_port)
 
-    def force_delivery(self, inst):
+    def delivery_msg(self, inst):
         d = defer.Deferred()
 
         try:
@@ -214,45 +217,12 @@ class Learner(object):
         except KeyError as ex:
             logging.error("Error while delivering message [{}]".format(ex))
             self.retry_instance(inst)
-            d.callback("Retry")
 
         except Exception as ex:
             logging.error("Unexpected error delivering message [{}]".format(ex))
-            d.callback("Error")
+            self.retry_instance(inst)
 
         return d
-
-    def deliver_instance(self, inst):
-        d = defer.Deferred()
-
-        try:
-            if inst == self.min_uncommited_index:
-                cmd = self.learner.logs[inst]
-                cmd_in_dict = json.loads(cmd)
-                logging.info("Trying to deliver [{}]".format(cmd_in_dict))
-
-                self.deliver(cmd_in_dict, d)
-                self.min_uncommited_index += 1
-
-                if inst < self.max_instance:
-                    logging.info("Try to deliver next instance [{}]".format(inst))
-
-                    self.deliver_instance(inst + 1)
-                return d
-
-            elif inst > self.min_uncommited_index:
-                logging.info("Retrying to deliver [{}]".format(inst))
-
-                return self.deliver_instance(inst - 1)
-            else:
-                logging.error("Doing nothing!")
-        except KeyError as keyerr:
-            logging.error("Error while delivering message [{}]".format(keyerr))
-            self.retry_instance(inst)
-            d.callback("Retry")
-            return d
-        except Exception as ex:
-            logging.error("Unexpected error while delivering the message [{}]".format(ex))
 
     def handle_pkt(self, pkt):
         """
@@ -282,7 +252,7 @@ class Learner(object):
                     inst = int(res[0])
                     if self.max_instance < inst:
                         self.max_instance = inst
-                    d = self.force_delivery(inst)
+                    d = self.delivery_msg(inst)
                     d.addCallback(self.respond, req_id, pkt[IP].src,
                                   pkt[UDP].dport, pkt[UDP].sport)
 
