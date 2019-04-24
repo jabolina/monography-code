@@ -199,6 +199,29 @@ class Learner(object):
         msg1a = self.make_paxos(PHASE_1A, inst, 1, 0, '')
         Learner.send_msg(msg1a, self.learner_addr, self.learner_port)
 
+    def force_delivery(self, inst):
+        d = defer.Deferred()
+
+        try:
+            if inst in self.learner.logs:
+                cmd = self.learner.logs[inst]
+                cmd_in_dict = json.loads(cmd)
+
+                logging.info("Trying to deliver [{}]".format(cmd_in_dict))
+
+                self.deliver(cmd_in_dict, d)
+
+        except KeyError as ex:
+            logging.error("Error while delivering message [{}]".format(ex))
+            self.retry_instance(inst)
+            d.callback("Retry")
+
+        except Exception as ex:
+            logging.error("Unexpected error delivering message [{}]".format(ex))
+            d.callback("Error")
+
+        return d
+
     def deliver_instance(self, inst):
         d = defer.Deferred()
 
@@ -259,7 +282,7 @@ class Learner(object):
                     inst = int(res[0])
                     if self.max_instance < inst:
                         self.max_instance = inst
-                    d = self.deliver_instance(inst)
+                    d = self.force_delivery(inst)
                     d.addCallback(self.respond, req_id, pkt[IP].src,
                                   pkt[UDP].dport, pkt[UDP].sport)
 
