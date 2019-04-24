@@ -47,6 +47,9 @@ class WebServer(Resource):
         print request
         request.args['action'] = 'get'
         data = json.dumps(request.args)
+
+        logging.info("Received get request with [{}]".format(data))
+
         d = self.proposer.submit(data)
         d.addCallback(self._waitResponse, request)
         return NOT_DONE_YET
@@ -55,6 +58,9 @@ class WebServer(Resource):
         print request
         request.args['action'] = 'put'
         data = json.dumps(request.args)
+
+        logging.info("Received post request with [{}]".format(data))
+
         d = self.proposer.submit(data)
         d.addCallback(self._waitResponse, request)
         return NOT_DONE_YET
@@ -68,6 +74,8 @@ if __name__ == '__main__':
     config.read(args.cfg)
     proposer = Proposer(config, 0)
     reactor.listenUDP(config.getint('proposer', 'port'), proposer)
+
+    logging.info("Starting server on port 8080")
 
     root = MainPage()
     server = WebServer(proposer)
