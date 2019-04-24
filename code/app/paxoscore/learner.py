@@ -269,8 +269,6 @@ class Learner(object):
         except Exception as ex:
             logging.error("Unknown error while handling packet [{}]".format(ex))
 
-        return "OK"
-
     def start(self, count, timeout):
         """
         Start a learner by sniffing on all learner's interfaces.
@@ -280,10 +278,10 @@ class Learner(object):
         try:
             if timeout > 0:
                 sniff(count=count, timeout=timeout, filter="udp && dst port 34952",
-                      prn=lambda x: self.handle_pkt(x))
+                      prn=lambda x: self.handle_pkt(x), store=0)
             else:
                 sniff(count=count, filter="udp && dst port 34952",
-                      prn=lambda x: self.handle_pkt(x))
+                      prn=lambda x: self.handle_pkt(x), store=0)
         except Exception as e:
             logging.error("Error sniffing [{}]".format(e))
 
