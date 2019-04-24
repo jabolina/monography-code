@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.7
 
+import logging
 import ConfigParser
 import argparse
 import json
@@ -11,6 +12,7 @@ from twisted.web.server import Site, NOT_DONE_YET
 from paxoscore.proposer import Proposer
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+logging.basicConfig(filename="server.log", level=logging.DEBUG, format='%(message)s')
 
 
 class MainPage(Resource):
@@ -34,9 +36,12 @@ class WebServer(Resource):
         self.proposer = proposer
 
     def _waitResponse(self, result, request):
-        result = result.rstrip('\t\r\n\0')
-        request.write(result)
-        request.finish()
+        try:
+            result = result.rstrip('\t\r\n\0')
+            request.write(result)
+            request.finish()
+        except Exception as ex:
+            logging.error("Error sending response [{}] => [{}]".format(result, ex))
 
     def render_GET(self, request):
         print request

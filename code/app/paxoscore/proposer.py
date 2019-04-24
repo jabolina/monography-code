@@ -66,3 +66,5 @@ class Proposer(DatagramProtocol):
                 self.defers.pop(req_id)
         except defer.AlreadyCalledError as ex:
             logging.error("Error while handling response: [{}]".format(ex.message))
+        except Exception as ex:
+            logging.error("Unknown error happened: [{}]".format(ex))
