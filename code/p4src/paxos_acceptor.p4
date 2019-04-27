@@ -6,8 +6,7 @@
 // INSTANCE_COUNT is number of entries in the registers.
 // So, INSTANCE_COUNT = 2^INSTANCE_SIZE.
 
-// #define INSTANCE_COUNT 65536
-#define INSTANCE_COUNT 512
+#define INSTANCE_COUNT 65536
 
 field_list resubmit_field_list {
     paxos_packet_metadata.invalid_instance;
@@ -132,14 +131,11 @@ control ingress {
         apply(tbl_inst);
         apply(tbl_rnd);
         
-        if (paxos_packet_metadata.invalid_instance >= paxos.instance) {
+        if (paxos_packet_metadata.invalid_instance >= paxos.instance
+            or paxos_packet_metadata.round > paxos.round) {
                 apply(drop_tbl);
         } else if (paxos_packet_metadata.valid_instance >= paxos.instance) {
-            if (paxos_packet_metadata.round <= paxos.round) {
-                apply(tbl_acceptor);
-            } else {
-                apply(drop_tbl);
-            }
+            apply(tbl_acceptor);
         } else {
             apply(tbl_slide_window);
         }

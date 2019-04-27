@@ -5,8 +5,8 @@ table_set_default tbl_rnd read_round
 table_set_default drop_tbl _drop
 table_set_default tbl_inst read_instance
 table_set_default tbl_slide_window slide_window
-register_write valid_instance_register 0 5
-register_write future_instance_register 0 8
+register_write valid_instance_register 0 10
+register_write future_instance_register 0 20
 table_add tbl_acceptor handle_1a 1 =>
 table_add tbl_acceptor handle_2a 3 =>
 table_add mcast_src_pruning _drop 5 =>
