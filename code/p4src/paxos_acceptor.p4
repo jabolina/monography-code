@@ -6,7 +6,7 @@
 // INSTANCE_COUNT is number of entries in the registers.
 // So, INSTANCE_COUNT = 2^INSTANCE_SIZE.
 
-#define INSTANCE_COUNT 65536
+#define INSTANCE_COUNT 16
 
 field_list resubmit_field_list {
     paxos_packet_metadata.invalid_instance;
