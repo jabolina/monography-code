@@ -12,7 +12,7 @@ from twisted.web.server import Site, NOT_DONE_YET
 from paxoscore.proposer import Proposer
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-logging.basicConfig(filename="server.log", level=logging.DEBUG, format='%(message)s')
+logging.basicConfig(filename=THIS_DIR + "/server.log", level=logging.DEBUG, format='%(message)s')
 
 
 class MainPage(Resource):
@@ -73,7 +73,11 @@ if __name__ == '__main__':
     config = ConfigParser.ConfigParser()
     config.read(args.cfg)
     proposer = Proposer(config, 0)
-    reactor.listenUDP(config.getint('proposer', 'port'), proposer)
+    
+    try:
+        reactor.listenUDP(config.getint('proposer', 'port'), proposer)
+    except Exception as ex:
+        logging.error("Error listening UDP [{}]".format(ex))
 
     logging.info("Starting server on port 8080")
 
@@ -83,6 +87,9 @@ if __name__ == '__main__':
     root.putChild('get', server)
     root.putChild('put', server)
     factory = Site(root)
-    reactor.listenTCP(8080, factory)
 
-    reactor.run()
+    try:
+        reactor.listenTCP(8080, factory)
+        reactor.run()
+    except Exception as ex:
+        logging.error("Error listening tcp: [{}]".format(ex))
