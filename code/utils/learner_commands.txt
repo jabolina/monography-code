@@ -1,0 +1,8 @@
+table_set_default deliver_tbl broadcast
+table_set_default rnd_tbl read_round
+table_add learner_tbl handle_2b 4 =>
+table_add start_tbl handle_new_value 4 =>
+table_add drop_tbl _drop 1 =>
+mc_mgrp_create 1
+mc_node_create 0 1 2 3 4 5
+mc_node_associate 1 0
