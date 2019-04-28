@@ -19,25 +19,26 @@
 
 base_path=$PWD/../../environment
 
-if [ $# -eq 1 ]; then
+if [[ $# -eq 1 ]]; then
     base_path=~
 fi
 
-bmv2_path=$base_path/bmv2
-p4c_bm_path=$base_path/p4c-bmv2
+bmv2_path=${base_path}/bmv2
+p4c_bm_path=${base_path}/p4c-bmv2
 ##########################
 
-p4c_bm_script=$p4c_bm_path/p4c_bm/__main__.py
-switch_path=$bmv2_path/targets/simple_switch/simple_switch
-cli_path=$bmv2_path/targets/simple_switch/sswitch_CLI
+p4c_bm_script=${p4c_bm_path}/p4c_bm/__main__.py
+switch_path=${bmv2_path}/targets/simple_switch/simple_switch
+cli_path=${bmv2_path}/targets/simple_switch/sswitch_CLI
 
-$p4c_bm_script ../p4src/paxos_coordinator.p4 --json paxos_coordinator.json
-$p4c_bm_script ../p4src/paxos_acceptor.p4 --json paxos_acceptor.json
-$p4c_bm_script ../p4src/paxos_learner.p4 --json paxos_learner.json
+${p4c_bm_script} ../p4src/paxos_coordinator.p4 --json paxos_coordinator.json
+${p4c_bm_script} ../p4src/paxos_acceptor.p4 --json paxos_acceptor.json
+${p4c_bm_script} ../p4src/paxos_learner.p4 --json paxos_learner.json
 
-sudo PYTHONPATH=$PYTHONPATH:$bmv2_path/mininet/ python topo.py \
-    --behavioral-exe $switch_path \
+sudo PYTHONPATH=$PYTHONPATH:${bmv2_path}/mininet/ python topo.py \
+    --behavioral-exe ${switch_path} \
     --acceptor paxos_acceptor.json \
     --coordinator paxos_coordinator.json \
-    --cli $cli_path \
+    --learner paxos_learner.json \
+    --cli ${cli_path} \
     --start-server
