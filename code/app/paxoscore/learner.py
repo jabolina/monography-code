@@ -41,12 +41,12 @@ class PaxosMessage(object):
 class PaxosLearner(object):
     """
     PaxosLearner acts as Paxos learner that learns a decision from a majority
-    of acceptors. 
+    of acceptors.
     """
 
     def __init__(self, num_acceptors):
         """
-        Initialize a learner with a the number of acceptors to decide the 
+        Initialize a learner with a the number of acceptors to decide the
         quorum size.
         """
         self.logs = {}
@@ -76,7 +76,8 @@ class PaxosLearner(object):
             self.crnd = crnd
             self.nids = set()
             self.val = None
-            self.finished = False
+            self.finished = True
+            self.saved = False
 
     def handle_p1b(self, msg):
         """handle 1a message and return decision if existing a majority.
@@ -85,22 +86,27 @@ class PaxosLearner(object):
         state = self.proposerState.get(msg.inst)
         if state is None:
             state = self.ProposerState(msg.crnd)
-        if not state.finished:
-            if state.crnd == msg.crnd:
-                if msg.nid not in state.nids:
-                    state.nids.add(msg.nid)
-                    if state.hvrnd <= msg.vrnd:
-                        state.hval = msg.val
 
-                    if len(state.nids) >= self.majority:
-                        state.finished = True
-                        res = PaxosMessage(10, msg.inst, state.crnd, state.hvrnd, state.hval)
-                    self.proposerState[msg.inst] = state
+        if state.crnd == msg.crnd:
+            if msg.nid not in state.nids:
+                state.nids.add(msg.nid)
+                if state.hvrnd <= msg.vrnd:
+                    state.hval = msg.val
+
+                state.saved = True
+                res = PaxosMessage(10, msg.inst, state.crnd, state.hvrnd, state.hval)
+                self.proposerState[msg.inst] = state
+
         return res
 
     def handle_p2b(self, msg):
-        """handle 2a message and return decision if existing a majority.
-        Otherwise return None"""
+        """
+            Handle message of type 2B, saving the response and
+            delivering the packet back to the application
+
+        :param msg: An Paxos Message ready to be learned by the application
+        :return: Tuple with instance number and the result
+        """
         res = None
         logging.info("Message with instance number [{}]".format(msg.inst))
 
@@ -110,27 +116,22 @@ class PaxosLearner(object):
 
         logging.info("Message instance is finished? [{}]".format(state.finished))
 
-        if not state.finished:
+        if not state.saved:
             if state.crnd < msg.crnd:
                 logging.info("state rnd < msg rnd")
                 state = self.LearnerState(msg.crnd)
 
             if state.crnd == msg.crnd:
-                logging.info("Message from acceptor with id [{}]".format(msg.nid))
+                logging.info("Saving new message in the logs and states")
 
                 if msg.nid not in state.nids:
                     state.nids.add(msg.nid)
                     if state.val is None:
                         state.val = msg.val
 
-                    logging.info("Majority? [{}]".format(len(state.nids) >= self.majority))
-                    logging.info("Acceptor who voted [{}]".format(state.nids))
-
-                    if len(state.nids) >= self.majority:
-                        state.finished = True
-                        self.logs[msg.inst] = state.val
-                        res = (msg.inst, state.val)
-
+                    state.saved = True
+                    self.logs[msg.inst] = state.val
+                    res = (msg.inst, state.val)
                     self.states[msg.inst] = state
         else:
             res = (msg.inst, self.logs[msg.inst])
@@ -226,8 +227,11 @@ class Learner(object):
 
     def handle_pkt(self, pkt):
         """
-        This method handles the arrived packet, such as parsing, handing out the packet to
-        Paxos learner module, and delivering the decision.
+        The arrived packet will already been the learner switch, so
+        they will be delivered to the application again with the
+        response
+
+        :arg pkt: Sniffed packet
         """
 
         try:
@@ -246,7 +250,7 @@ class Learner(object):
 
             if typ == PHASE_2B:
                 res = self.learner.handle_p2b(msg)
-                logging.info("Message 2B with req [{}] response [{}] will be ignored [{}]".format(req_id, res, res is None))
+                logging.info("Message 2B with req [{}] response [{}]".format(req_id, res))
 
                 if res is not None:
                     inst = int(res[0])
@@ -255,7 +259,8 @@ class Learner(object):
                     d = self.delivery_msg(inst)
                     d.addCallback(self.respond, req_id, pkt[IP].src,
                                   pkt[UDP].dport, pkt[UDP].sport)
-
+                else:
+                    logging.error("Message with responde None, cant be handled [{}]".format(unpacked_data))
             elif typ == PHASE_1B:
                 res = self.learner.handle_p1b(msg)
                 logging.info("Message 1B response [{}] is type None [{}]".format(res, res is None))
@@ -263,6 +268,9 @@ class Learner(object):
                 if res is not None:
                     msg2a = self.make_paxos(PHASE_2A, res.inst, res.crnd, res.vrnd, res.val)
                     self.send_msg(msg2a, self.learner_addr, self.learner_port)
+
+            else:
+                logging.error("Message type not found to be delivered: [{}]".format(unpacked_data))
 
         except IndexError as ex:
             logging.error("Error while handling packet [{}]".format(ex))

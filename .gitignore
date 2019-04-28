@@ -110,3 +110,4 @@ venv.bak/
 .vscode/
 *.pcap
 logs/
+bak/
