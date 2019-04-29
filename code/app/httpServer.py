@@ -12,7 +12,7 @@ from twisted.web.server import Site, NOT_DONE_YET
 from paxoscore.proposer import Proposer
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-logging.basicConfig(filename=THIS_DIR + "/server.log", level=logging.DEBUG, format='%(message)s')
+logging.basicConfig(filename="/server.log", level=logging.DEBUG, format='%(message)s')
 
 
 class MainPage(Resource):
@@ -37,6 +37,7 @@ class WebServer(Resource):
 
     def _waitResponse(self, result, request):
         try:
+            logging.info("Sending response [{}]".format(result))
             result = result.rstrip('\t\r\n\0')
             request.write(result)
             request.finish()
@@ -74,6 +75,8 @@ if __name__ == '__main__':
     config.read(args.cfg)
     proposer = Proposer(config, 0)
     
+    logging.info("Starting http server")
+
     try:
         reactor.listenUDP(config.getint('proposer', 'port'), proposer)
     except Exception as ex:

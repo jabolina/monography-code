@@ -168,7 +168,7 @@ class Learner(object):
 
         logging.info("Sending response [{}] with id [{}]".format(packed_data, req_id))
 
-        send(pkt_header / packed_data, verbose=True)
+        sendp(pkt_header / packed_data, verbose=True)
 
     @staticmethod
     def make_paxos(typ, i, rnd, vrnd, val):
@@ -260,7 +260,7 @@ class Learner(object):
                     d.addCallback(self.respond, req_id, pkt[IP].src,
                                   pkt[UDP].dport, pkt[UDP].sport)
                 else:
-                    logging.error("Message with responde None, cant be handled [{}]".format(unpacked_data))
+                    logging.error("Message with response None, cant be handled [{}]".format(unpacked_data))
             elif typ == PHASE_1B:
                 res = self.learner.handle_p1b(msg)
                 logging.info("Message 1B response [{}] is type None [{}]".format(res, res is None))

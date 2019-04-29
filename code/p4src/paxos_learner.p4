@@ -2,6 +2,7 @@
 #include "includes/parser.p4"
 #include "includes/paxos_headers.p4"
 #include "includes/paxos_parser.p4"
+#include "l2_control.p4"
 
 #define INSTANCE_COUNT 65536
 #define ACCEPTOR_COUNT 8
@@ -101,6 +102,9 @@ table drop_tbl {
 }
 
 control ingress {
+    apply(smac);
+    apply(dmac);
+
     if (valid(paxos)) {
         apply(rnd_tbl);
 
@@ -110,9 +114,9 @@ control ingress {
             apply(learner_tbl);
         }
 
-        if (paxos_packet_metadata.acceptors >= MAJORITY) {
+        /* if (paxos_packet_metadata.acceptors >= MAJORITY) {
             apply(deliver_tbl);
-        }
+        } */
     }
 }
 
