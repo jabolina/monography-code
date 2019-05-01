@@ -51,7 +51,6 @@ action handle_new_value() {
 
 action deliver() {
     modify_field(intrinsic_metadata_paxos.set_drop, 0);
-    modify_field(intrinsic_metadata.mcast_grp, 1);
 }
 
 table rnd_tbl {
@@ -84,8 +83,7 @@ table start_tbl {
 }
 
 control ingress {
-    /* apply(smac);
-    apply(dmac); */
+    apply(smac);
 
     if (valid(paxos)) {
         apply(rnd_tbl);
@@ -99,6 +97,7 @@ control ingress {
 
         if (paxos_packet_metadata.acceptors > 7) {
             apply(deliver_tbl);
+            apply(dmac);
         }
     }
 }
