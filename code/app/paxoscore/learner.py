@@ -164,11 +164,11 @@ class Learner(object):
         """
         packer = struct.Struct('>' + 'B {0}s'.format(VALUE_SIZE))
         packed_data = packer.pack(*(req_id, str(result)))
-        pkt_header = IP(dst=dst) / UDP(sport=sport, dport=dport)
+        packet = IP(dst=dst) / UDP(sport=sport, dport=dport) / Raw(load=packed_data)
 
         logging.info("Sending response [{}] with id [{}]".format(packed_data, req_id))
 
-        send(pkt_header / packed_data, verbose=True)
+        send(packet, verbose=True)
 
     @staticmethod
     def make_paxos(typ, i, rnd, vrnd, val):
