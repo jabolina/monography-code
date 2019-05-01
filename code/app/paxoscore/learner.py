@@ -168,7 +168,7 @@ class Learner(object):
 
         logging.info("Sending response [{}] with id [{}]".format(packed_data, req_id))
 
-        sendp(pkt_header / packed_data, verbose=True)
+        send(pkt_header / packed_data, verbose=True)
 
     @staticmethod
     def make_paxos(typ, i, rnd, vrnd, val):

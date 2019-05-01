@@ -91,7 +91,7 @@ class CustomTopology(Topo):
                             sw_path=sw_path,
                             json_path=learner,
                             thrift_port=_THRIFT_BASE_PORT + 5,
-                            pcap_dump=False,
+                            pcap_dump=True,
                             log_console=True,
                             verbose=True,
                             device_id=5)

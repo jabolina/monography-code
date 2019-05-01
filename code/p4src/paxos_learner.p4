@@ -2,7 +2,6 @@
 #include "includes/parser.p4"
 #include "includes/paxos_headers.p4"
 #include "includes/paxos_parser.p4"
-#include "l2_control.p4"
 
 #define INSTANCE_COUNT 65536
 #define ACCEPTOR_COUNT 8
@@ -36,7 +35,6 @@ register vote_history {
 action read_round() {
     register_read(paxos_packet_metadata.round, rounds_register, paxos.instance);
     register_read(paxos_packet_metadata.acceptors, vote_history, paxos.instance);
-    modify_field(paxos_packet_metadata.set_drop, 1);
 }
 
 action handle_2b() {
@@ -51,6 +49,7 @@ action handle_new_value() {
     register_write(rounds_register, paxos.instance, paxos.round);
     register_write(values_register, paxos.instance, paxos.value);
     register_write(vote_history, paxos.instance, 1 << paxos.acceptor);
+    modify_field(paxos_packet_metadata.set_drop, 1);
 }
 
 action broadcast() {
@@ -102,9 +101,6 @@ table drop_tbl {
 }
 
 control ingress {
-    apply(smac);
-    apply(dmac);
-
     if (valid(paxos)) {
         apply(rnd_tbl);
 
@@ -114,9 +110,9 @@ control ingress {
             apply(learner_tbl);
         }
 
-        /* if (paxos_packet_metadata.acceptors >= MAJORITY) {
+        if (paxos_packet_metadata.acceptors >= MAJORITY) {
             apply(deliver_tbl);
-        } */
+        }
     }
 }
 
