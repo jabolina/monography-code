@@ -111,7 +111,8 @@ class CustomTopology(Topo):
         for i, s in enumerate([s5]):
             for j, h in enumerate([h2, h3]):
                 self.addLink(h, s, intfName1='eth{0}'.format(i + 1),
-                             params1={'ip': '10.0.{0}.{1}/8'.format(i + 1, j + 2)}
+                             params1={
+                                 'ip': '10.0.{0}.{1}/8'.format(i + 1, j + 2)}
                              )
 
         # All acceptors connected into the coordinator and to the leaner
@@ -120,8 +121,18 @@ class CustomTopology(Topo):
             self.addLink(s, s5)
 
 
+def execute_command(cmd, rule=''):
+    p = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    out, err = p.communicate(rule)
+    if out:
+        print(out)
+    if err:
+        print(err)
+
+
 def main():
-    topology = CustomTopology(args.behavioral_exe, args.acceptor, args.coordinator, args.learner)
+    topology = CustomTopology(
+        args.behavioral_exe, args.acceptor, args.coordinator, args.learner)
 
     net = Mininet(topo=topology,
                   host=P4Host,
@@ -186,16 +197,10 @@ def main():
 
     learner_ids = []
     for i in range(2, len(topology.learners) + 2):
-        cmd = [args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)]
         learner_id = i - 1
-        rule = 'register_write datapath_id 0 %d' % learner_id
         learner_ids.append(learner_id)
-        p = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        out, err = p.communicate(rule)
-        if out:
-            print(out)
-        if err:
-            print("Error adding datapath id: [{}]".format(err))
+        execute_command(cmd=[args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)],
+                        rule='register_write datapath_id 0 %d' % learner_id)
 
     majority = 1 << learner_ids[0]
     if len(learner_ids) >= 2:
@@ -204,12 +209,7 @@ def main():
 
     cmd = [args.cli, args.learner, str(_THRIFT_BASE_PORT + learner_swid)]
     rule = 'register_write majority_value 0 %d' % majority
-    p = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    out, err = p.communicate(rule)
-    if out:
-        print(out)
-    if err:
-        print(err)
+    execute_command(cmd, rule)
 
     if args.start_server:
         h1 = net.get('h1')
