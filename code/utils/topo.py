@@ -62,8 +62,9 @@ class CustomTopology(Topo):
         :param opts: Another options of the topology, not being used
         """
         Topo.__init__(self, **opts)
-        self.learners = []
+        self.acceptors = []
         self.machines = []
+        self.learners = []
 
         # Coordinator
         s1 = self.addSwitch('s1',
@@ -77,25 +78,26 @@ class CustomTopology(Topo):
 
         # Acceptors
         for i in [2, 3, 4]:
+            self.acceptors.append(self.addSwitch('s%d' % i,
+                                                 sw_path=sw_path,
+                                                 json_path=acceptor,
+                                                 thrift_port=_THRIFT_BASE_PORT + i,
+                                                 pcap_dump=False,
+                                                 log_console=True,
+                                                 verbose=True,
+                                                 device_id=i))
+
+        # Learners
+        base_swid = len(self.acceptors) + 2
+        for i in range(base_swid, base_swid + 1):
             self.learners.append(self.addSwitch('s%d' % i,
                                                 sw_path=sw_path,
-                                                json_path=acceptor,
+                                                json_path=learner,
                                                 thrift_port=_THRIFT_BASE_PORT + i,
-                                                pcap_dump=False,
+                                                pcap_dump=True,
                                                 log_console=True,
                                                 verbose=True,
                                                 device_id=i))
-
-        # Learner
-        learner_swid = len(self.learners) + 2
-        s5 = self.addSwitch('s%d' % learner_swid,
-                            sw_path=sw_path,
-                            json_path=learner,
-                            thrift_port=_THRIFT_BASE_PORT + learner_swid,
-                            pcap_dump=True,
-                            log_console=True,
-                            verbose=True,
-                            device_id=learner_swid)
 
         # Create hosts
         for h in [1, 2, 3, 4]:
@@ -108,17 +110,19 @@ class CustomTopology(Topo):
         self.addLink(h4, s1)
 
         # Hosts 2 and 3 connected only to switch 5 (leaner)
-        for i, s in enumerate([s5]):
+        for i, s in enumerate(self.learners):
             for j, h in enumerate([h2, h3]):
-                self.addLink(h, s, intfName1='eth{0}'.format(i + 1),
+                self.addLink(h, s,
+                             intfName1='eth{0}'.format(i + 1),
                              params1={
                                  'ip': '10.0.{0}.{1}/8'.format(i + 1, j + 2)}
                              )
 
-        # All acceptors connected into the coordinator and to the leaner
-        for _, s in enumerate(self.learners):
+        # All acceptors connected into the coordinator and to all learners
+        for _, s in enumerate(self.acceptors):
             self.addLink(s, s1)
-            self.addLink(s, s5)
+            for __, l in enumerate(self.learners):
+                self.addLink(s, l)
 
 
 def execute_command(cmd, rule=''):
@@ -162,7 +166,7 @@ def main():
     sleep(2)
 
     print("Acceptors commands!")
-    for i in range(2, len(topology.learners) + 2):
+    for i in range(2, len(topology.acceptors) + 2):
         cmd = [args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)]
 
         with open("acceptor_commands.txt", "r") as f:
@@ -184,19 +188,8 @@ def main():
         except subprocess.CalledProcessError as e:
             print("Error happened issuing coordinator commands: [{}]".format(e))
 
-    print("Leaner commands!")
-    learner_swid = len(topology.learners) + 2
-    cmd = [args.cli, args.learner, str(_THRIFT_BASE_PORT + learner_swid)]
-    with open("learner_commands.txt", "r") as f:
-        print(" ".join(cmd))
-        try:
-            output = subprocess.check_output(cmd, stdin=f)
-            print(output)
-        except subprocess.CalledProcessError as e:
-            print("Error happened issuing learner commands: [{}]".format(e))
-
     learner_ids = []
-    for i in range(2, len(topology.learners) + 2):
+    for i in range(2, len(topology.acceptors) + 2):
         learner_id = i - 1
         learner_ids.append(learner_id)
         execute_command(cmd=[args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)],
@@ -207,9 +200,18 @@ def main():
         id1 = learner_ids[1]
         majority = majority | (1 << id1)
 
-    cmd = [args.cli, args.learner, str(_THRIFT_BASE_PORT + learner_swid)]
-    rule = 'register_write majority_value 0 %d' % majority
-    execute_command(cmd, rule)
+    print("Leaner commands!")
+    base_swid = len(topology.acceptors) + 2
+    for i in range(base_swid, base_swid + len(topology.learners)):
+        cmd = [args.cli, args.learner, str(_THRIFT_BASE_PORT + i)]
+        with open("learner_commands.txt", "r") as f:
+            print(" ".join(cmd))
+            try:
+                execute_command(cmd, rule='register_write majority_value 0 %d' % majority)
+                output = subprocess.check_output(cmd, stdin=f)
+                print(output)
+            except subprocess.CalledProcessError as e:
+                print("Error happened issuing learner commands: [{}]".format(e))
 
     if args.start_server:
         h1 = net.get('h1')
