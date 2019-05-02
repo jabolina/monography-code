@@ -29,6 +29,9 @@ from subprocess import PIPE
 _THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 _THRIFT_BASE_PORT = 22222
 
+_NUM_OF_ACCEPTOS = 3
+_NUM_OF_LEARNERS = 1
+
 parser = argparse.ArgumentParser(description='Mininet demo')
 parser.add_argument('--behavioral-exe', help='Path to behavioral executable',
                     type=str, action="store", required=True)
@@ -77,7 +80,7 @@ class CustomTopology(Topo):
                             device_id=1)
 
         # Acceptors
-        for i in [2, 3, 4]:
+        for i in range(2, _NUM_OF_ACCEPTOS + 1):
             self.acceptors.append(self.addSwitch('s%d' % i,
                                                  sw_path=sw_path,
                                                  json_path=acceptor,
@@ -89,7 +92,7 @@ class CustomTopology(Topo):
 
         # Learners
         base_swid = len(self.acceptors) + 2
-        for i in range(base_swid, base_swid + 1):
+        for i in range(base_swid, base_swid + _NUM_OF_LEARNERS):
             self.learners.append(self.addSwitch('s%d' % i,
                                                 sw_path=sw_path,
                                                 json_path=learner,
