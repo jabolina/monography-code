@@ -10,9 +10,15 @@ header_type ingress_metadata_t {
         round: ROUND_SIZE;
         count: ACCEPTOR_COUNT;
         acceptors: ACCEPTOR_COUNT;
+        majority: INSTANCE_COUNT;
     }
 }
 metadata ingress_metadata_t paxos_packet_metadata;
+
+register majority_value {
+    width: INSTANCE_COUNT;
+    instance_count: 1;
+}
 
 register rounds_register {
     width: ROUND_SIZE;
@@ -32,6 +38,7 @@ register vote_history {
 action read_round() {
     register_read(paxos_packet_metadata.round, rounds_register, paxos.instance);
     register_read(paxos_packet_metadata.acceptors, vote_history, paxos.instance);
+    register_read(paxos_packet_metadata.majority, majority_value, 0);
     modify_field(intrinsic_metadata_paxos.set_drop, 1);
 }
 
@@ -95,7 +102,7 @@ control ingress {
             apply(learner_tbl);
         }
 
-        if (paxos_packet_metadata.acceptors > 7) {
+        if (paxos_packet_metadata.acceptors >= paxos_packet_metadata.majority) {
             apply(deliver_tbl);
             apply(dmac);
         }

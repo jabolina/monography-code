@@ -62,8 +62,8 @@ class CustomTopology(Topo):
         :param opts: Another options of the topology, not being used
         """
         Topo.__init__(self, **opts)
-        switches = []
-        hosts = []
+        self.learners = []
+        self.machines = []
 
         # Coordinator
         s1 = self.addSwitch('s1',
@@ -77,30 +77,31 @@ class CustomTopology(Topo):
 
         # Acceptors
         for i in [2, 3, 4]:
-            switches.append(self.addSwitch('s%d' % i,
-                                           sw_path=sw_path,
-                                           json_path=acceptor,
-                                           thrift_port=_THRIFT_BASE_PORT + i,
-                                           pcap_dump=False,
-                                           log_console=True,
-                                           verbose=True,
-                                           device_id=i))
+            self.learners.append(self.addSwitch('s%d' % i,
+                                                sw_path=sw_path,
+                                                json_path=acceptor,
+                                                thrift_port=_THRIFT_BASE_PORT + i,
+                                                pcap_dump=False,
+                                                log_console=True,
+                                                verbose=True,
+                                                device_id=i))
 
         # Learner
-        s5 = self.addSwitch('s5',
+        learner_swid = len(self.learners) + 2
+        s5 = self.addSwitch('s%d' % learner_swid,
                             sw_path=sw_path,
                             json_path=learner,
-                            thrift_port=_THRIFT_BASE_PORT + 5,
+                            thrift_port=_THRIFT_BASE_PORT + learner_swid,
                             pcap_dump=True,
                             log_console=True,
                             verbose=True,
-                            device_id=5)
+                            device_id=learner_swid)
 
         # Create hosts
         for h in [1, 2, 3, 4]:
-            hosts.append(self.addHost('h%d' % h))
+            self.machines.append(self.addHost('h%d' % h))
 
-        h1, h2, h3, h4 = hosts
+        h1, h2, h3, h4 = self.machines
 
         # Hosts 1 and 4 connected only to switch 1 (coordinator)
         self.addLink(h1, s1)
@@ -114,7 +115,7 @@ class CustomTopology(Topo):
                              )
 
         # All acceptors connected into the coordinator and to the leaner
-        for _, s in enumerate(switches):
+        for _, s in enumerate(self.learners):
             self.addLink(s, s1)
             self.addLink(s, s5)
 
@@ -129,7 +130,7 @@ def main():
 
     net.start()
 
-    for n in [1, 2, 3, 4]:
+    for n in range(1, len(topology.machines) + 1):
         h = net.get('h%d' % n)
 
         for off in ["rx", "tx", "sg"]:
@@ -150,7 +151,7 @@ def main():
     sleep(2)
 
     print("Acceptors commands!")
-    for i in [2, 3, 4]:
+    for i in range(2, len(topology.learners) + 2):
         cmd = [args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)]
 
         with open("acceptor_commands.txt", "r") as f:
@@ -173,7 +174,8 @@ def main():
             print("Error happened issuing coordinator commands: [{}]".format(e))
 
     print("Leaner commands!")
-    cmd = [args.cli, args.coordinator, str(_THRIFT_BASE_PORT + 5)]
+    learner_swid = len(topology.learners) + 2
+    cmd = [args.cli, args.learner, str(_THRIFT_BASE_PORT + learner_swid)]
     with open("learner_commands.txt", "r") as f:
         print(" ".join(cmd))
         try:
@@ -182,15 +184,32 @@ def main():
         except subprocess.CalledProcessError as e:
             print("Error happened issuing learner commands: [{}]".format(e))
 
-    for i in [2, 3, 4]:
+    learner_ids = []
+    for i in range(2, len(topology.learners) + 2):
         cmd = [args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)]
-        rule = 'register_write datapath_id 0 %d' % (i - 1)
+        learner_id = i - 1
+        rule = 'register_write datapath_id 0 %d' % learner_id
+        learner_ids.append(learner_id)
         p = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate(rule)
         if out:
             print(out)
         if err:
             print("Error adding datapath id: [{}]".format(err))
+
+    majority = 1 << learner_ids[0]
+    if len(learner_ids) >= 2:
+        id1 = learner_ids[1]
+        majority = majority | (1 << id1)
+
+    cmd = [args.cli, args.learner, str(_THRIFT_BASE_PORT + learner_swid)]
+    rule = 'register_write majority_value 0 %d' % majority
+    p = subprocess.Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    out, err = p.communicate(rule)
+    if out:
+        print(out)
+    if err:
+        print(err)
 
     if args.start_server:
         h1 = net.get('h1')
