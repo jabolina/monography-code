@@ -172,7 +172,7 @@ def main():
     for i in range(2, len(topology.acceptors) + 2):
         cmd = [args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)]
 
-        with open("acceptor_commands.txt", "r") as f:
+        with open("commands/acceptor_commands.txt", "r") as f:
             print(" ".join(cmd))
 
             try:
@@ -183,7 +183,7 @@ def main():
 
     print("Coordinator commands!")
     cmd = [args.cli, args.coordinator, str(_THRIFT_BASE_PORT + 1)]
-    with open("coordinator_commands.txt", "r") as f:
+    with open("commands/coordinator_commands.txt", "r") as f:
         print(" ".join(cmd))
         try:
             output = subprocess.check_output(cmd, stdin=f)
@@ -207,7 +207,7 @@ def main():
     base_swid = len(topology.acceptors) + 2
     for i in range(base_swid, base_swid + len(topology.learners)):
         cmd = [args.cli, args.learner, str(_THRIFT_BASE_PORT + i)]
-        with open("learner_commands.txt", "r") as f:
+        with open("commands/learner_commands.txt", "r") as f:
             print(" ".join(cmd))
             try:
                 execute_command(cmd, rule='register_write majority_value 0 %d' % majority)
