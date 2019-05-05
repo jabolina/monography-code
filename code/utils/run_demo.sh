@@ -35,7 +35,7 @@ ${p4c_bm_script} ../p4src/paxos_coordinator.p4 --json paxos_coordinator.json
 ${p4c_bm_script} ../p4src/paxos_acceptor.p4 --json paxos_acceptor.json
 ${p4c_bm_script} ../p4src/paxos_learner.p4 --json paxos_learner.json
 
-sudo PYTHONPATH=$PYTHONPATH:${bmv2_path}/mininet/ python topo.py \
+sudo PYTHONPATH=$PYTHONPATH:${bmv2_path}/mininet/ python topology.py \
     --behavioral-exe ${switch_path} \
     --acceptor paxos_acceptor.json \
     --coordinator paxos_coordinator.json \
