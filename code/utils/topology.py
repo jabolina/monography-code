@@ -6,8 +6,9 @@ from time import sleep
 from mininet.cli import CLI
 from mininet.log import info, setLogLevel
 from mininet.net import Containernet
+from mininet.node import Docker
+from node import P4xosHost, P4xosSwitch
 from mininet.topo import Topo
-from p4_mininet import P4Switch, P4Host
 
 parser = argparse.ArgumentParser(description='Mininet demo')
 parser.add_argument('--behavioral-exe', help='Path to behavioral executable',
@@ -31,74 +32,6 @@ _NUM_OF_ACCEPTORS = 3
 _NUM_OF_LEARNERS = 1
 
 
-class Topology(Topo):
-    def __init__(self, sw_path, acceptor, coordinator, learner, **kwargs):
-
-        Topo.__init__(self, **kwargs)
-
-        self.acceptors = []
-        self.containers = []
-        self.learners = []
-
-        # Coordinator
-        s1 = self.addSwitch('s1',
-                            sw_path=sw_path,
-                            json_path=coordinator,
-                            thrift_port=_THRIFT_BASE_PORT + 1,
-                            pcap_dump=False,
-                            log_console=True,
-                            verbose=True,
-                            device_id=1)
-
-        # Acceptors
-        for a in range(2, _NUM_OF_ACCEPTORS + 2):
-            self.acceptors.append(self.addSwitch('s%d' % a,
-                                                 sw_path=sw_path,
-                                                 json_path=acceptor,
-                                                 thrift_port=_THRIFT_BASE_PORT + a,
-                                                 pcap_dump=False,
-                                                 log_console=True,
-                                                 verbose=True,
-                                                 device_id=a))
-
-        # Learners
-        base_swid = len(self.acceptors) + 2
-        for l in range(base_swid, base_swid + _NUM_OF_LEARNERS):
-            self.learners.append(self.addSwitch('s%d' % l,
-                                                sw_path=sw_path,
-                                                json_path=learner,
-                                                thrift_port=_THRIFT_BASE_PORT + l,
-                                                pcap_dump=True,
-                                                log_console=True,
-                                                verbose=True,
-                                                device_id=l))
-
-        # Creating the containers
-        for c in [1, 2, 3, 4]:
-            self.containers.append(self.addDocker('d%d' % c))
-
-        d1, d2, d3, d4 = self.containers
-
-        # Container 1 and 4 connected only to coordinator
-        self.addLink(d1, s1)
-        self.addLink(d4, s1)
-
-        # Containers 2 and 3 connects to all learners
-        for i, s in enumerate(self.learners):
-            for j, c in enumerate([d2, d3]):
-                self.addLink(c, s,
-                             intfName1='eth{0}'.format(i + 1),
-                             params1={
-                                 'ip': '10.0.{0}.{1}/8'.format(i + 1, j + 2)
-                             })
-
-        # All acceptors connected into the coordinator and into all learners
-        for a in self.acceptors:
-            self.addLink(a, s1)
-            for l in self.learners:
-                self.addLink(a, l)
-
-
 def topology(sw_path, acceptor, coordinator, learner):
     """
             Will create the 4 containers for the applications, then will create
@@ -118,7 +51,7 @@ def topology(sw_path, acceptor, coordinator, learner):
         :param kwargs: Options for the Mininet topology
         :returns Containernet instance, acceptors, containers, learners
         """
-    net = Containernet(host=P4Host, switch=P4Switch, controller=None)
+    net = Containernet(host=P4xosHost, switch=P4xosSwitch, controller=None)
 
     acceptors = []
     containers = []
@@ -126,6 +59,7 @@ def topology(sw_path, acceptor, coordinator, learner):
 
     info('**** Adding coordinator switch ****\n')
     s1 = net.addSwitch('s1',
+                       cls=P4xosSwitch,
                        sw_path=sw_path,
                        json_path=coordinator,
                        thrift_port=_THRIFT_BASE_PORT + 1,
@@ -137,6 +71,7 @@ def topology(sw_path, acceptor, coordinator, learner):
     info('**** Adding %d acceptors ****\n' % _NUM_OF_ACCEPTORS)
     for a in range(2, _NUM_OF_ACCEPTORS + 2):
         acceptors.append(net.addSwitch('s%d' % a,
+                                       cls=P4xosSwitch,
                                        sw_path=sw_path,
                                        json_path=acceptor,
                                        thrift_port=_THRIFT_BASE_PORT + a,
@@ -149,6 +84,7 @@ def topology(sw_path, acceptor, coordinator, learner):
     base_swid = len(acceptors) + 2
     for l in range(base_swid, base_swid + _NUM_OF_LEARNERS):
         learners.append(net.addSwitch('s%d' % l,
+                                      cls=P4xosSwitch,
                                       sw_path=sw_path,
                                       json_path=learner,
                                       thrift_port=_THRIFT_BASE_PORT + l,
@@ -158,22 +94,55 @@ def topology(sw_path, acceptor, coordinator, learner):
                                       device_id=l))
 
     info('**** Adding containers ****\n')
-    # , dcmd='python2 /c/app/httpServer.py --cfg /c/app/paxos.cfg'
-    # , dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg'
     containers.append(
-        net.addDocker('d1', ip='10.0.0.1', dimage='p4xos', dcmd='python2 /c/app/httpServer.py --cfg /c/app/paxos.cfg')
+        net.addDocker('d1',
+                      cls=P4xosHost,
+                      ip='10.0.0.1',
+                      dimage='p4xos',
+                      dcmd='python2 /c/app/httpServer.py --cfg /c/app/paxos.cfg',
+                      ports=[8080, 34953],
+                      port_bindings={8080: 8080, 34953: 34953},
+                      network_mode="host",
+                      publish_all_ports=True
+                      )
     )
 
     containers.append(
-        net.addDocker('d2', ip='10.0.0.2', dimage='p4xos', dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg')
+        net.addDocker('d2',
+                      cls=P4xosHost,
+                      ip='10.0.0.2',
+                      dimage='p4xos',
+                      dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg',
+                      ports=[8081, 34952],
+                      port_bindings={8081: 8081, 34952: 34952},
+                      network_mode="host",
+                      publish_all_ports=True
+                      )
     )
 
     containers.append(
-        net.addDocker('d3', ip='10.0.0.3', dimage='p4xos', dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg')
+        net.addDocker('d3',
+                      cls=P4xosHost,
+                      ip='10.0.0.3',
+                      dimage='p4xos',
+                      dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg',
+                      ports=[8082],
+                      port_bindings={8082: 8082},
+                      network_mode="host",
+                      publish_all_ports=True
+                      )
     )
 
     containers.append(
-        net.addDocker('d4', ip='10.0.0.4', dimage='p4xos')
+        net.addDocker('d4',
+                      cls=P4xosHost,
+                      ip='10.0.0.4',
+                      dimage='p4xos',
+                      ports=[8083],
+                      port_bindings={8083: 8083},
+                      network_mode="host",
+                      publish_all_ports=True
+                      )
     )
 
     d1, d2, d3, d4 = containers
@@ -185,11 +154,7 @@ def topology(sw_path, acceptor, coordinator, learner):
     # Containers 2 and 3 connects to all learners
     for i, s in enumerate(learners):
         for j, c in enumerate([d2, d3]):
-            net.addLink(c, s,
-                        intfName1='eth{0}'.format(i + 1),
-                        params1={
-                            'ip': '10.0.{0}.{1}/8'.format(i + 1, j + 2)
-                        })
+            net.addLink(c, s)
 
     # All acceptors connected into the coordinator and into all learners
     for a in acceptors:
