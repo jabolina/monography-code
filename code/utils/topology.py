@@ -158,8 +158,23 @@ def topology(sw_path, acceptor, coordinator, learner):
                                       device_id=l))
 
     info('**** Adding containers ****\n')
-    for c in [1, 2, 3, 4]:
-        containers.append(net.addDocker('d%d' % c, ip='10.0.0.%d' % c, dimage='ubuntu:trusty'))
+    # , dcmd='python2 /c/app/httpServer.py --cfg /c/app/paxos.cfg'
+    # , dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg'
+    containers.append(
+        net.addDocker('d1', ip='10.0.0.1', dimage='p4xos', dcmd='python2 /c/app/httpServer.py --cfg /c/app/paxos.cfg')
+    )
+
+    containers.append(
+        net.addDocker('d2', ip='10.0.0.2', dimage='p4xos', dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg')
+    )
+
+    containers.append(
+        net.addDocker('d3', ip='10.0.0.3', dimage='p4xos', dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg')
+    )
+
+    containers.append(
+        net.addDocker('d4', ip='10.0.0.4', dimage='p4xos')
+    )
 
     d1, d2, d3, d4 = containers
 
@@ -192,6 +207,7 @@ def execute_command(cmd, rule=''):
         print(out)
     if err:
         print(err)
+
 
 def main():
     net, containers, acceptors, learners = \
@@ -266,14 +282,6 @@ def main():
                 print(output)
             except subprocess.CalledProcessError as e:
                 print("Error happened issuing learner commands: [{}]".format(e))
-
-    if args.start_server:
-        h1 = net.get('d1')
-        h1.cmd("python ../app/httpServer.py --cfg ../app/paxos.cfg &")
-        h2 = net.get('d2')
-        h2.cmd("python ../app/backend.py --cfg ../app/paxos.cfg &")
-        h3 = net.get('d3')
-        h3.cmd("python ../app/backend.py --cfg ../app/paxos.cfg &")
 
     info("Ready!\n")
 
