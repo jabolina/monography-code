@@ -6,9 +6,8 @@ from time import sleep
 from mininet.cli import CLI
 from mininet.log import info, setLogLevel
 from mininet.net import Containernet
-from mininet.node import Docker
+
 from node import P4xosHost, P4xosSwitch
-from mininet.topo import Topo
 
 parser = argparse.ArgumentParser(description='Mininet demo')
 parser.add_argument('--behavioral-exe', help='Path to behavioral executable',

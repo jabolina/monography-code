@@ -1,6 +1,5 @@
-from p4_mininet import P4Switch, P4Host
 from mininet.node import Docker
-from mininet.link import Intf
+from p4_mininet import P4Switch
 
 
 class P4xosSwitch(P4Switch):
@@ -11,10 +10,6 @@ class P4xosSwitch(P4Switch):
 class P4xosHost(Docker):
     def __init__(self, name, dimage, dcmd=None, **params):
         super(P4xosHost, self).__init__(name, dimage, dcmd, **params)
-        # super(P4xosHost, self).addIntf(Intf("eth0", node=self))
-        # super(P4xosHost, self).config(**params)
-
-        # self.defaultIntf().rename("eth0")
 
         for off in ["rx", "tx", "sg"]:
             cmd = "/sbin/ethtool --offload eth0 %s off" % off
