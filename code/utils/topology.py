@@ -101,7 +101,6 @@ def topology(sw_path, acceptor, coordinator, learner):
                       dcmd='python2 /c/app/httpServer.py --cfg /c/app/paxos.cfg',
                       ports=[8080, 34953],
                       port_bindings={8080: 8080, 34953: 34953},
-                      network_mode="host",
                       publish_all_ports=True
                       )
     )
@@ -112,9 +111,8 @@ def topology(sw_path, acceptor, coordinator, learner):
                       ip='10.0.0.2',
                       dimage='p4xos',
                       dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg',
-                      ports=[8081, 34952],
-                      port_bindings={8081: 8081, 34952: 34952},
-                      network_mode="host",
+                      ports=[34952],
+                      port_bindings={34952: 34952},
                       publish_all_ports=True
                       )
     )
@@ -125,9 +123,8 @@ def topology(sw_path, acceptor, coordinator, learner):
                       ip='10.0.0.3',
                       dimage='p4xos',
                       dcmd='python2 /c/app/backend.py --cfg /c/app/paxos.cfg',
-                      ports=[8082],
-                      port_bindings={8082: 8082},
-                      network_mode="host",
+                      ports=[34952],
+                      port_bindings={34951: 34952},
                       publish_all_ports=True
                       )
     )
@@ -137,9 +134,6 @@ def topology(sw_path, acceptor, coordinator, learner):
                       cls=P4xosHost,
                       ip='10.0.0.4',
                       dimage='p4xos',
-                      ports=[8083],
-                      port_bindings={8083: 8083},
-                      network_mode="host",
                       publish_all_ports=True
                       )
     )
@@ -194,7 +188,7 @@ def main():
         h.cmd("sysctl -w net.ipv4.tcp_congestion_control=reno")
         h.cmd("iptables -I OUTPUT -p icmp --icmp-type destination-unreachable -j DROP")
 
-        info("**** Add mutlicast route for container %d ****\n" % n)
+        info("**** Add multicast route for container %d ****\n" % n)
         h.cmd("route add -net 224.0.0.0 netmask 224.0.0.0 eth0")
 
     sleep(2)
@@ -231,8 +225,7 @@ def main():
 
     majority = 1 << learner_ids[0]
     if len(learner_ids) >= 2:
-        id1 = learner_ids[1]
-        majority = majority | (1 << id1)
+        majority = majority | (1 << learner_ids[1])
 
     info("**** Leaner commands! ****\n")
     base_swid = len(acceptors) + 2
