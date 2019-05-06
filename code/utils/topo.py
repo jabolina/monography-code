@@ -29,7 +29,7 @@ from subprocess import PIPE
 _THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 _THRIFT_BASE_PORT = 22222
 
-_NUM_OF_ACCEPTOS = 3
+_NUM_OF_ACCEPTORS = 3
 _NUM_OF_LEARNERS = 1
 
 parser = argparse.ArgumentParser(description='Mininet demo')
@@ -80,7 +80,7 @@ class CustomTopology(Topo):
                             device_id=1)
 
         # Acceptors
-        for i in range(2, _NUM_OF_ACCEPTOS + 1):
+        for i in range(2, _NUM_OF_ACCEPTORS + 2):
             self.acceptors.append(self.addSwitch('s%d' % i,
                                                  sw_path=sw_path,
                                                  json_path=acceptor,
@@ -112,7 +112,7 @@ class CustomTopology(Topo):
         self.addLink(h1, s1)
         self.addLink(h4, s1)
 
-        # Hosts 2 and 3 connected only to switch 5 (leaner)
+        # Hosts 2 and 3 connected to all learners
         for i, s in enumerate(self.learners):
             for j, h in enumerate([h2, h3]):
                 self.addLink(h, s,
@@ -200,8 +200,7 @@ def main():
 
     majority = 1 << learner_ids[0]
     if len(learner_ids) >= 2:
-        id1 = learner_ids[1]
-        majority = majority | (1 << id1)
+        majority = majority | (1 << learner_ids[1])
 
     print("Leaner commands!")
     base_swid = len(topology.acceptors) + 2
