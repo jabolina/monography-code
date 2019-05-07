@@ -6,7 +6,7 @@
 // INSTANCE_COUNT is number of entries in the registers.
 // So, INSTANCE_COUNT = 2^INSTANCE_SIZE.
 
-#define INSTANCE_COUNT 6
+#define INSTANCE_COUNT 65536
 
 field_list resubmit_field_list {
     paxos_packet_metadata.invalid_instance;
@@ -66,6 +66,7 @@ register future_instance_register {
 // problematic if the instance exceeds the bounds of the register.
 action read_round() {
     register_read(paxos_packet_metadata.round, rounds_register, paxos.instance);
+    modify_field(intrinsic_metadata_paxos.set_drop, 1);
 }
 
 // This will read the values accepted by the window into the packet metadata
@@ -90,6 +91,7 @@ action slide_window() {
 
 // Receive Paxos 1A message, send Paxos 1B message
 action handle_1a() {
+    modify_field(intrinsic_metadata_paxos.set_drop, 1);
     modify_field(paxos.msgtype, PAXOS_1B);                                        // Create a 1B message
     register_read(paxos.vround, vrounds_register, paxos.instance);                // paxos.vround = vrounds_register[paxos.instance]
     register_read(paxos.value, values_register, paxos.instance);                  // paxos.value  = values_register[paxos.instance]
@@ -99,6 +101,7 @@ action handle_1a() {
 
 // Receive Paxos 2A message, send Paxos 2B message
 action handle_2a() {
+    modify_field(intrinsic_metadata_paxos.set_drop, 1);
     modify_field(paxos.msgtype, PAXOS_2B);				                          // Create a 2B message
     register_write(rounds_register, paxos.instance, paxos.round);                 // rounds_register[paxos.instance] = paxos.round
     register_write(vrounds_register, paxos.instance, paxos.round);                // vrounds_register[paxos.instance] = paxos.round
@@ -130,14 +133,13 @@ control ingress {
     if (valid(paxos)) {          /* check if we have a paxos packet */
         apply(tbl_inst);
         apply(tbl_rnd);
-        
-        if (paxos_packet_metadata.invalid_instance >= paxos.instance
-            or paxos_packet_metadata.round > paxos.round) {
-                apply(drop_tbl);
-        } else if (paxos_packet_metadata.valid_instance >= paxos.instance) {
-            apply(tbl_acceptor);
-        } else {
-            apply(tbl_slide_window);
+
+        if (paxos_packet_metadata.invalid_instance < paxos.instance) {
+            if (paxos_packet_metadata.valid_instance >= paxos.instance) {
+                apply(tbl_acceptor);
+            } else {
+                apply(tbl_slide_window);
+            }
         }
     }
 }

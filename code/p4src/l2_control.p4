@@ -1,6 +1,13 @@
 #include "includes/headers.p4"
 #include "includes/parser.p4"
 
+header_type intrinsic_metadata_paxos_t {
+    fields {
+        set_drop: 1;
+    }
+}
+metadata intrinsic_metadata_paxos_t intrinsic_metadata_paxos;
+
 action _drop() {
     drop();
 }
@@ -56,12 +63,17 @@ table mcast_src_pruning {
 }
 
 table drop_tbl {
-    actions { _drop; }
-    size : 1;
+    reads {
+        intrinsic_metadata_paxos.set_drop: exact;
+    }
+    actions { _drop; _nop; }
+    size : 2;
 }
 
 control egress {
     if(standard_metadata.ingress_port == standard_metadata.egress_port) {
         apply(mcast_src_pruning);
     }
+
+    apply(drop_tbl);
 }

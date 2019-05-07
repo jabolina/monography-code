@@ -115,7 +115,7 @@ def main():
 
     for i in [2, 3, 4]:
         cmd = [args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)]
-        with open("acceptor_commands.txt", "r") as f:
+        with open("commands/acceptor_commands.txt", "r") as f:
             print " ".join(cmd)
             try:
                 output = subprocess.check_output(cmd, stdin=f)
@@ -125,7 +125,7 @@ def main():
                 print e.output
 
     cmd = [args.cli, args.coordinator, str(_THRIFT_BASE_PORT + 1)]
-    with open("coordinator_commands.txt", "r") as f:
+    with open("commands/coordinator_commands.txt", "r") as f:
         print " ".join(cmd)
         try:
             output = subprocess.check_output(cmd, stdin=f)
