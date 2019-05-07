@@ -95,8 +95,7 @@ control ingress {
     if (valid(paxos)) {
         apply(rnd_tbl);
 
-        if (paxos.round >= paxos_packet_metadata.round
-            and paxos_packet_metadata.acceptors == 0) {
+        if (paxos.round > paxos_packet_metadata.round) {
             apply(start_tbl);
         } else if (paxos.round == paxos_packet_metadata.round) {
             apply(learner_tbl);
