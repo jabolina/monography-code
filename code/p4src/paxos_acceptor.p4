@@ -86,13 +86,12 @@ action slide_window() {
     register_write(valid_instance_register, 0, paxos_packet_metadata.valid_instance);
     register_write(future_instance_register, 0, paxos_packet_metadata.new_instance);
 
-    modify_field(intrinsic_metadata.recirculate_flag, 1);
-    // resubmit(resubmit_field_list);
+    resubmit(resubmit_field_list);
 }
 
 // Receive Paxos 1A message, send Paxos 1B message
 action handle_1a() {
-    modify_field(intrinsic_metadata_paxos.set_drop, 1);
+    modify_field(intrinsic_metadata_paxos.set_drop, 0);
     modify_field(paxos.msgtype, PAXOS_1B);                                        // Create a 1B message
     register_read(paxos.vround, vrounds_register, paxos.instance);                // paxos.vround = vrounds_register[paxos.instance]
     register_read(paxos.value, values_register, paxos.instance);                  // paxos.value  = values_register[paxos.instance]
@@ -102,7 +101,7 @@ action handle_1a() {
 
 // Receive Paxos 2A message, send Paxos 2B message
 action handle_2a() {
-    modify_field(intrinsic_metadata_paxos.set_drop, 1);
+    modify_field(intrinsic_metadata_paxos.set_drop, 0);
     modify_field(paxos.msgtype, PAXOS_2B);				                          // Create a 2B message
     register_write(rounds_register, paxos.instance, paxos.round);                 // rounds_register[paxos.instance] = paxos.round
     register_write(vrounds_register, paxos.instance, paxos.round);                // vrounds_register[paxos.instance] = paxos.round
