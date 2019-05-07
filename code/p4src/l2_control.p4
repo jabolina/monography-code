@@ -66,7 +66,7 @@ table drop_tbl {
     reads {
         intrinsic_metadata_paxos.set_drop: exact;
     }
-    actions { _drop; _nop; }
+    actions { _nop; _drop; }
     size : 2;
 }
 
