@@ -86,7 +86,8 @@ action slide_window() {
     register_write(valid_instance_register, 0, paxos_packet_metadata.valid_instance);
     register_write(future_instance_register, 0, paxos_packet_metadata.new_instance);
 
-    resubmit(resubmit_field_list);
+    modify_field(intrinsic_metadata.recirculate_flag, 1);
+    // resubmit(resubmit_field_list);
 }
 
 // Receive Paxos 1A message, send Paxos 1B message
