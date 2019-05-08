@@ -97,7 +97,7 @@ class CustomTopology(Topo):
                                                 sw_path=sw_path,
                                                 json_path=learner,
                                                 thrift_port=_THRIFT_BASE_PORT + i,
-                                                pcap_dump=True,
+                                                pcap_dump=False,
                                                 log_console=True,
                                                 verbose=True,
                                                 device_id=i))
@@ -182,22 +182,20 @@ def main():
                 print("Error happened issuing acceptors commands: [{}]".format(e))
 
     print("Coordinator commands!")
+    learner_ids = []
     cmd = [args.cli, args.coordinator, str(_THRIFT_BASE_PORT + 1)]
     with open("commands/coordinator_commands.txt", "r") as f:
         print(" ".join(cmd))
         try:
+            learner_id = i - 1
+            learner_ids.append(learner_id)
+            execute_command(cmd=[args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)],
+                            rule='register_write datapath_id 0 %d' % learner_id)
             output = subprocess.check_output(cmd, stdin=f)
             print(output)
         except subprocess.CalledProcessError as e:
             print("Error happened issuing coordinator commands: [{}]".format(e))
-
-    learner_ids = []
-    for i in range(2, len(topology.acceptors) + 2):
-        learner_id = i - 1
-        learner_ids.append(learner_id)
-        execute_command(cmd=[args.cli, args.acceptor, str(_THRIFT_BASE_PORT + i)],
-                        rule='register_write datapath_id 0 %d' % learner_id)
-
+    
     majority = 1 << learner_ids[0]
     if len(learner_ids) >= 2:
         majority = majority | (1 << learner_ids[1])

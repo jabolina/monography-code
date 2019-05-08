@@ -1,6 +1,7 @@
 table_set_default smac mac_learn
 table_set_default dmac broadcast
 table_set_default mcast_src_pruning _nop
+table_set_default drop_tbl _nop
 table_set_default deliver_tbl deliver
 table_set_default rnd_tbl read_round
 table_add learner_tbl handle_2b 4 =>

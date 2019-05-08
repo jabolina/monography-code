@@ -91,6 +91,7 @@ table start_tbl {
 
 control ingress {
     apply(smac);
+    apply(dmac);
 
     if (valid(paxos)) {
         apply(rnd_tbl);
@@ -103,7 +104,6 @@ control ingress {
 
         if (paxos_packet_metadata.acceptors >= paxos_packet_metadata.majority) {
             apply(deliver_tbl);
-            apply(dmac);
         }
     }
 }
