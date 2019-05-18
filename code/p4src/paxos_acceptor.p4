@@ -60,6 +60,13 @@ register future_instance_register {
     instance_count: 1;
 }
 
+// When the window slides, the register must be cleaned in for the
+// inactive instance
+action clean_register() {
+    register_write(rounds_register, paxos_packet_metadata.invalid_instance, 0);
+    register_write(vrounds_register, paxos_packet_metadata.invalid_instance, 0);
+    register_write(values_register, paxos_packet_metadata.invalid_instance, 0);
+}
 
 // Copying Paxos-fields from the register to meta-data structure. The index
 // (i.e., paxos instance number) is read from the current packet. Could be
@@ -121,6 +128,10 @@ table tbl_slide_window {
     actions { slide_window; }
 }
 
+table tbl_clean_register {
+    actions { clean_register; }
+}
+
 table tbl_acceptor {
     reads   { paxos.msgtype : exact; }
     actions { handle_1a; handle_2a; _drop; }
@@ -134,12 +145,53 @@ control ingress {
         apply(tbl_inst);
         apply(tbl_rnd);
 
-        if (paxos_packet_metadata.invalid_instance < paxos.instance) {
-            if (paxos_packet_metadata.valid_instance >= paxos.instance) {
+        /**
+         * Here we have 3 cases, the default case, when the window is sliding from left to right.
+         * When the first margin of the window restart and when only the invalid instances not
+         * restarted again.
+         * 
+         * In the next comments, i is for the left margin of the invalid instances, j for the start of
+         * valid instances and k for the start of new instances, x is used for the current instance.
+         */
+
+        if (
+            (paxos_packet_metadata.invalid_instance < paxos_packet_metadata.valid_instance and
+            paxos_packet_metadata.valid_instance < paxos_packet_metadata.new_instance)
+            or
+            (paxos_packet_metadata.new_instance < paxos_packet_metadata.invalid_instance and
+            paxos_packet_metadata.invalid_instance < paxos_packet_metadata.valid_instance)
+            or
+            (paxos_packet_metadata.valid_instance < paxos_packet_metadata.new_instance and
+            paxos_packet_metadata.new_instance < paxos_packet_metadata.invalid_instance)
+        ) {
+
+            if (
+                (paxos_packet_metadata.invalid_instance < paxos.instance and
+                paxos_packet_metadata.valid_instance <= paxos.instance and
+                paxos.instance < paxos_packet_metadata.new_instance)
+                or
+                (paxos_packet_metadata.valid_instance <= paxos.instance or
+                (paxos.instance < paxos_packet_metadata.new_instance))
+                or
+                (paxos_packet_metadata.valid_instance <= paxos.instance and
+                    paxos.instance < paxos_packet_metadata.new_instance)
+            ) {
                 apply(tbl_acceptor);
-            } else {
+            } else if (
+                (paxos_packet_metadata.new_instance <= paxos.instance and
+                    paxos_packet_metadata.invalid_instance < paxos.instance)
+                or
+                (paxos_packet_metadata.new_instance <= paxos.instance and
+                    paxos.instance < paxos_packet_metadata.invalid_instance)
+                or
+                (paxos_packet_metadata.new_instance <= paxos.instance and
+                    paxos.instance < paxos_packet_metadata.invalid_instance)
+            ) {
+                apply(tbl_clean_register);
                 apply(tbl_slide_window);
             }
         }
+
+        
     }
 }
