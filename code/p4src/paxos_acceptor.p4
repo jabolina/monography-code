@@ -155,35 +155,42 @@ control ingress {
          */
 
         if (
+            // i < j < k
             (paxos_packet_metadata.invalid_instance < paxos_packet_metadata.valid_instance and
-            paxos_packet_metadata.valid_instance < paxos_packet_metadata.new_instance)
+                paxos_packet_metadata.valid_instance < paxos_packet_metadata.new_instance)
             or
+            // k < i < j
             (paxos_packet_metadata.new_instance < paxos_packet_metadata.invalid_instance and
-            paxos_packet_metadata.invalid_instance < paxos_packet_metadata.valid_instance)
+                paxos_packet_metadata.invalid_instance < paxos_packet_metadata.valid_instance)
             or
+            // j < k < i
             (paxos_packet_metadata.valid_instance < paxos_packet_metadata.new_instance and
-            paxos_packet_metadata.new_instance < paxos_packet_metadata.invalid_instance)
+                paxos_packet_metadata.new_instance < paxos_packet_metadata.invalid_instance)
         ) {
 
             if (
+                // i < x and j <= x and x < k
                 (paxos_packet_metadata.invalid_instance < paxos.instance and
-                paxos_packet_metadata.valid_instance <= paxos.instance and
-                paxos.instance < paxos_packet_metadata.new_instance)
+                    paxos_packet_metadata.valid_instance <= paxos.instance and
+                    paxos.instance < paxos_packet_metadata.new_instance)
                 or
-                (paxos_packet_metadata.valid_instance <= paxos.instance or
-                (paxos.instance < paxos_packet_metadata.new_instance))
+                // (j <= x and k < j) or (x < k and k < j)
+                ((paxos_packet_metadata.valid_instance <= paxos.instance and
+                    paxos_packet_metadata.new_instance < paxos_packet_metadata.valid_instance) or
+                    (paxos.instance < paxos_packet_metadata.new_instance and
+                    paxos_packet_metadata.new_instance < paxos_packet_metadata.valid_instance))
                 or
+                // j <= x and x < k
                 (paxos_packet_metadata.valid_instance <= paxos.instance and
                     paxos.instance < paxos_packet_metadata.new_instance)
             ) {
                 apply(tbl_acceptor);
             } else if (
+                // k <= x and i < x
                 (paxos_packet_metadata.new_instance <= paxos.instance and
                     paxos_packet_metadata.invalid_instance < paxos.instance)
                 or
-                (paxos_packet_metadata.new_instance <= paxos.instance and
-                    paxos.instance < paxos_packet_metadata.invalid_instance)
-                or
+                // k <= x and x < i
                 (paxos_packet_metadata.new_instance <= paxos.instance and
                     paxos.instance < paxos_packet_metadata.invalid_instance)
             ) {
