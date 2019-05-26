@@ -153,52 +153,51 @@ control ingress {
          * In the next comments, i is for the left margin of the invalid instances, j for the start of
          * valid instances and k for the start of new instances, x is used for the current instance.
          */
-
-        if (
-            // i < j < k
-            (paxos_packet_metadata.invalid_instance < paxos_packet_metadata.valid_instance and
-                paxos_packet_metadata.valid_instance < paxos_packet_metadata.new_instance)
-            or
-            // k < i < j
-            (paxos_packet_metadata.new_instance < paxos_packet_metadata.invalid_instance and
-                paxos_packet_metadata.invalid_instance < paxos_packet_metadata.valid_instance)
-            or
-            // j < k < i
-            (paxos_packet_metadata.valid_instance < paxos_packet_metadata.new_instance and
-                paxos_packet_metadata.new_instance < paxos_packet_metadata.invalid_instance)
-        ) {
-
+        if (paxos_packet_metadata.round <= paxos.round) {
             if (
-                // i < x and j <= x and x < k
-                (paxos_packet_metadata.invalid_instance < paxos.instance and
-                    paxos_packet_metadata.valid_instance <= paxos.instance and
-                    paxos.instance < paxos_packet_metadata.new_instance)
+                // i < j < k
+                (paxos_packet_metadata.invalid_instance < paxos_packet_metadata.valid_instance and
+                    paxos_packet_metadata.valid_instance < paxos_packet_metadata.new_instance)
                 or
-                // (j <= x and k < j) or (x < k and k < j)
-                ((paxos_packet_metadata.valid_instance <= paxos.instance and
-                    paxos_packet_metadata.new_instance < paxos_packet_metadata.valid_instance) or
-                    (paxos.instance < paxos_packet_metadata.new_instance and
-                    paxos_packet_metadata.new_instance < paxos_packet_metadata.valid_instance))
+                // k < i < j
+                (paxos_packet_metadata.new_instance < paxos_packet_metadata.invalid_instance and
+                    paxos_packet_metadata.invalid_instance < paxos_packet_metadata.valid_instance)
                 or
-                // j <= x and x < k
-                (paxos_packet_metadata.valid_instance <= paxos.instance and
-                    paxos.instance < paxos_packet_metadata.new_instance)
+                // j < k < i
+                (paxos_packet_metadata.valid_instance < paxos_packet_metadata.new_instance and
+                    paxos_packet_metadata.new_instance < paxos_packet_metadata.invalid_instance)
             ) {
-                apply(tbl_acceptor);
-            } else if (
-                // k <= x and i < x
-                (paxos_packet_metadata.new_instance <= paxos.instance and
-                    paxos_packet_metadata.invalid_instance < paxos.instance)
-                or
-                // k <= x and x < i
-                (paxos_packet_metadata.new_instance <= paxos.instance and
-                    paxos.instance < paxos_packet_metadata.invalid_instance)
-            ) {
-                apply(tbl_clean_register);
-                apply(tbl_slide_window);
+
+                if (
+                    // i < x and j <= x and x < k
+                    (paxos_packet_metadata.invalid_instance < paxos.instance and
+                        paxos_packet_metadata.valid_instance <= paxos.instance and
+                        paxos.instance < paxos_packet_metadata.new_instance)
+                    or
+                    // (j <= x and k < j) or (x < k and k < j)
+                    ((paxos_packet_metadata.valid_instance <= paxos.instance and
+                        paxos_packet_metadata.new_instance < paxos_packet_metadata.valid_instance) or
+                        (paxos.instance < paxos_packet_metadata.new_instance and
+                        paxos_packet_metadata.new_instance < paxos_packet_metadata.valid_instance))
+                    or
+                    // j <= x and x < k
+                    (paxos_packet_metadata.valid_instance <= paxos.instance and
+                        paxos.instance < paxos_packet_metadata.new_instance)
+                ) {
+                    apply(tbl_acceptor);
+                } else if (
+                    // k <= x and i < x
+                    (paxos_packet_metadata.new_instance <= paxos.instance and
+                        paxos_packet_metadata.invalid_instance < paxos.instance)
+                    or
+                    // k <= x and x < i
+                    (paxos_packet_metadata.new_instance <= paxos.instance and
+                        paxos.instance < paxos_packet_metadata.invalid_instance)
+                ) {
+                    apply(tbl_clean_register);
+                    apply(tbl_slide_window);
+                }
             }
         }
-
-        
     }
 }
