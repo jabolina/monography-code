@@ -31,6 +31,6 @@ singledispatch==3.4.0.3
 six==1.12.0
 Tenjin==1.1.1
 thrift==0.11.0
-Twisted==19.7.0
+Twisted==22.10.0
 wrapt==1.11.1
 zope.interface==4.6.0
